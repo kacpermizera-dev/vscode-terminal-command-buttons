@@ -5,6 +5,7 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 ![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Language-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![Latest Release](https://img.shields.io/github/v/release/EboveR/vscode-terminal-command-buttons)](https://github.com/EboveR/vscode-terminal-command-buttons/releases)
 
 ## ✨ Features
 
@@ -15,14 +16,34 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 - **💾 Persistent Storage**: Your buttons are saved in workspace/user settings
 - **🔗 Terminal Integration**: Commands execute in your active terminal
 
+## � Installation
+
+### Option 1: Download Release (Recommended)
+
+1. Go to [Releases](https://github.com/EboveR/vscode-terminal-command-buttons/releases)
+2. Download the latest `terminal-command-buttons-x.x.x.vsix` file
+3. Open VS Code
+4. Press `Ctrl+Shift+P` and type "Extensions: Install from VSIX..."
+5. Select the downloaded `.vsix` file
+6. Look for the terminal icon in Activity Bar!
+
+### Option 2: Build from Source
+
+```bash
+git clone https://github.com/EboveR/vscode-terminal-command-buttons.git
+cd vscode-terminal-command-buttons
+npm install
+npm run package
+code --install-extension terminal-command-buttons-0.0.1.vsix
+```
+
 ## 🚀 Quick Start
 
-### Installation
+### Getting Started
 
-1. Install the extension in VS Code
-2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-3. Run **"Terminal Command Buttons: Open Terminal Command Buttons"**
-4. The panel will appear in the Explorer sidebar
+1. After installation, look for the **terminal icon** in Activity Bar (left sidebar)
+2. Click the icon to open the Terminal Commands panel
+3. Or use Command Palette (`Ctrl+Shift+P`) → "Terminal Command Buttons: Open Terminal Command Buttons"
 
 ### Adding Your First Button
 
@@ -39,6 +60,7 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 ### Pre-configured Buttons
 
 The extension comes with useful default buttons:
+
 - 📁 **List Files** - `ls -la`
 - 🟢 **Node.js Version** - `node --version`
 - 📦 **NPM Version** - `npm --version`
@@ -48,6 +70,7 @@ The extension comes with useful default buttons:
 ### Custom Commands
 
 Add any command you use frequently:
+
 - `npm install` - Install dependencies
 - `npm start` - Start development server
 - `git pull` - Pull latest changes

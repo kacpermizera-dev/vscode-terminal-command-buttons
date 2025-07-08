@@ -1,6 +1,52 @@
 # 🚀 Instalacja rozszerzenia Terminal Command Buttons
 
-## 📦 Opcja 1: Instalacja z pliku VSIX (Polecana)
+## � Dla użytkowników pobierających z GitHub
+
+### Opcja 1: Pobierz Release (Najprostsza)
+
+1. **Idź do GitHub repository:**
+
+   ```
+   https://github.com/EboveR/vscode-terminal-command-buttons
+   ```
+
+2. **Pobierz najnowszy release:**
+
+   - Kliknij **"Releases"** po prawej stronie
+   - Pobierz plik `terminal-command-buttons-X.X.X.vsix`
+
+3. **Zainstaluj w VS Code:**
+   - Otwórz VS Code
+   - `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+   - Wybierz pobrany plik `.vsix`
+
+### Opcja 2: Zbuduj ze źródeł (Dla programistów)
+
+1. **Sklonuj repozytorium:**
+
+   ```bash
+   git clone https://github.com/EboveR/vscode-terminal-command-buttons.git
+   cd vscode-terminal-command-buttons
+   ```
+
+2. **Zainstaluj zależności:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Zbuduj rozszerzenie:**
+
+   ```bash
+   npm run package
+   ```
+
+4. **Zainstaluj lokalnie:**
+   ```bash
+   code --install-extension terminal-command-buttons-0.0.1.vsix
+   ```
+
+## 📦 Instalacja z pliku VSIX (Po pobraniu)
 
 ### Krok 1: Zainstaluj rozszerzenie
 
@@ -18,7 +64,7 @@ terminal-command-buttons-0.0.1.vsix
 ### Krok 2: Alternatywnie przez terminal
 
 ```bash
-code --install-extension "C:\Users\kacpermi\Desktop\dev\vscode-terminal-extension\terminal-command-buttons-0.0.1.vsix"
+code --install-extension "C:\Users\EboveR\Desktop\dev\vscode-terminal-extension\terminal-command-buttons-0.0.1.vsix"
 ```
 
 ## ✅ Weryfikacja instalacji
