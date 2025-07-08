@@ -98,7 +98,7 @@ Click "+ Add" in the panel to create your own command buttons!
 1. **Iść na stronę Releases:**
 
    ```
-   https://github.com/kacpermi/vscode-terminal-command-buttons/releases
+   https://github.com/EboveR/vscode-terminal-command-buttons/releases
    ```
 
 2. **Pobrać plik VSIX** z najnowszego release
@@ -110,7 +110,7 @@ Click "+ Add" in the panel to create your own command buttons!
 Dodaj do README badge z najnowszą wersją:
 
 ```markdown
-[![Latest Release](https://img.shields.io/github/v/release/kacpermi/vscode-terminal-command-buttons)](https://github.com/kacpermi/vscode-terminal-command-buttons/releases)
+[![Latest Release](https://img.shields.io/github/v/release/EboveR/vscode-terminal-command-buttons)](https://github.com/EboveR/vscode-terminal-command-buttons/releases)
 ```
 
 ## 🔄 Następne wersje

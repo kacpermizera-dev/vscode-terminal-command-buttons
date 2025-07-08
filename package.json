@@ -3,16 +3,16 @@
   "displayName": "Terminal Command Buttons",
   "description": "Add configurable command buttons to VS Code terminal",
   "version": "0.0.1",
-  "publisher": "kacpermi",
+  "publisher": "EboveR",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kacpermi/vscode-terminal-command-buttons.git"
+    "url": "https://github.com/EboveR/vscode-terminal-command-buttons.git"
   },
   "bugs": {
-    "url": "https://github.com/kacpermi/vscode-terminal-command-buttons/issues"
+    "url": "https://github.com/EboveR/vscode-terminal-command-buttons/issues"
   },
-  "homepage": "https://github.com/kacpermi/vscode-terminal-command-buttons#readme",
+  "homepage": "https://github.com/EboveR/vscode-terminal-command-buttons#readme",
   "keywords": [
     "terminal",
     "commands",
