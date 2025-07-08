@@ -3,6 +3,7 @@
 ## 📦 Opcja 1: Instalacja z pliku VSIX (Polecana)
 
 ### Krok 1: Zainstaluj rozszerzenie
+
 ```bash
 # Otwórz Command Palette w VS Code
 Ctrl+Shift+P (Windows/Linux) lub Cmd+Shift+P (Mac)
@@ -15,6 +16,7 @@ terminal-command-buttons-0.0.1.vsix
 ```
 
 ### Krok 2: Alternatywnie przez terminal
+
 ```bash
 code --install-extension "C:\Users\kacpermi\Desktop\dev\vscode-terminal-extension\terminal-command-buttons-0.0.1.vsix"
 ```
@@ -22,11 +24,13 @@ code --install-extension "C:\Users\kacpermi\Desktop\dev\vscode-terminal-extensio
 ## ✅ Weryfikacja instalacji
 
 1. **Sprawdź czy rozszerzenie jest zainstalowane:**
+
    - `Ctrl+Shift+X` → Wpisz "Terminal Command Buttons"
    - Powinno pokazać się jako zainstalowane
 
 2. **Sprawdź ikonę w Activity Bar:**
-   - Po lewej stronie powinien pojawić się **terminal icon** 
+
+   - Po lewej stronie powinien pojawić się **terminal icon**
    - Kliknij na niego, żeby otworzyć panel
 
 3. **Test funkcjonalności:**
@@ -37,21 +41,24 @@ code --install-extension "C:\Users\kacpermi\Desktop\dev\vscode-terminal-extensio
 ## 🎯 Używanie rozszerzenia
 
 ### Domyślne przyciski:
+
 - 📁 **List Files** (`ls -la`)
-- 🟢 **Node.js Version** (`node --version`)  
+- 🟢 **Node.js Version** (`node --version`)
 - 📦 **NPM Version** (`npm --version`)
 - 🌿 **Git Status** (`git status`)
 - 📍 **Current Directory** (`pwd`)
 
 ### Dodawanie własnych przycisków:
+
 1. Kliknij **"+ Add"** w panelu
 2. Wypełnij formularz:
    - **Button Name**: np. "Build Project"
-   - **Command**: np. "npm run build" 
+   - **Command**: np. "npm run build"
    - **Color**: wybierz kolor
 3. Kliknij **"Save"**
 
 ### Wykonywanie komend:
+
 - Kliknij dowolny przycisk w panelu
 - Komenda wykona się w aktywnym terminalu
 - Jeśli nie ma terminala, zostanie utworzony nowy
@@ -59,27 +66,35 @@ code --install-extension "C:\Users\kacpermi\Desktop\dev\vscode-terminal-extensio
 ## 🔧 Ustawienia
 
 Twoje przyciski są zapisywane w:
+
 - **Workspace settings**: `.vscode/settings.json` (dla konkretnego projektu)
 - **Global settings**: VS Code User Settings (dla wszystkich projektów)
 
 ### Dostęp przez Command Palette:
+
 - `Ctrl+Shift+P` → "Terminal Command Buttons: Open Terminal Command Buttons"
 - `Ctrl+Shift+P` → "Terminal Command Buttons: Add New Command Button"
 
 ## 🆘 Rozwiązywanie problemów
 
 ### Problem: Nie widzę ikony terminala w Activity Bar
-**Rozwiązanie:** 
+
+**Rozwiązanie:**
+
 - Sprawdź czy rozszerzenie jest włączone: `Ctrl+Shift+X` → "Terminal Command Buttons"
 - Restart VS Code
 
 ### Problem: Przyciski się nie zapisują
+
 **Rozwiązanie:**
+
 - Sprawdź logi: Output → "Log (Extension Host)"
 - Upewnij się, że VS Code ma uprawnienia do zapisu
 
 ### Problem: Komendy się nie wykonują
+
 **Rozwiązanie:**
+
 - Upewnij się, że terminal jest aktywny
 - Sprawdź czy ścieżka do komend jest poprawna
 
@@ -93,14 +108,14 @@ Twoje przyciski są zapisywane w:
 }
 
 {
-  "name": "Start Dev Server", 
+  "name": "Start Dev Server",
   "command": "npm run dev",
   "color": "#2ecc71"
 }
 
 {
   "name": "Run Tests",
-  "command": "npm test", 
+  "command": "npm test",
   "color": "#f39c12"
 }
 
