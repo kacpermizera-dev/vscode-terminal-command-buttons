@@ -61,23 +61,28 @@ vscode-terminal-command-buttons/
 ## 🎯 Next Steps After Publishing
 
 ### 1. Enable GitHub Pages (Optional)
+
 - Go to repository **Settings** → **Pages**
 - Select source: **Deploy from a branch**
 - Choose **main** branch and **/ (root)** folder
 
 ### 2. Add Repository Topics
+
 - Go to repository main page
 - Click the ⚙️ gear icon next to "About"
 - Add topics: `vscode-extension`, `terminal`, `productivity`, `typescript`
 
 ### 3. Create Releases
+
 - Go to **Releases** → **Create a new release**
 - Tag version: `v0.0.1`
 - Release title: `Initial Release - Terminal Command Buttons`
 - Describe the features
 
 ### 4. Set Up GitHub Actions (Optional)
+
 Consider adding CI/CD workflows for:
+
 - Automated testing
 - Building extension packages
 - Publishing to VS Code Marketplace
