@@ -1,0 +1,40 @@
+// Sample buttons for local testing. Opened by the "Run Extension (test workspace)" launch configuration.
+// The folder sits inside the repository, so git commands run against this repo.
+{
+  "terminalCommandButtons.buttons": [
+    {
+      "id": "test-git-status",
+      "name": "Git Status",
+      "command": "git status",
+      "color": "#52baff",
+      "icon": "git-branch"
+    },
+    {
+      "id": "test-git-log",
+      "name": "Git Log",
+      "command": "git log --oneline -5",
+      "color": "#b180d7",
+      "icon": "history"
+    },
+    {
+      "id": "test-list-files",
+      "name": "List Files",
+      "command": "ls -la",
+      "color": "#89d185",
+      "icon": "folder"
+    },
+    {
+      "id": "test-no-icon",
+      "name": "Echo Without Icon",
+      "command": "echo \"button without an icon shows initials\"",
+      "color": "#cca700"
+    },
+    {
+      "id": "test-long-command",
+      "name": "Long Command",
+      "command": "echo one && echo two && echo three && echo four && echo five && echo six",
+      "color": "#44ff00",
+      "icon": "run-all"
+    }
+  ]
+}

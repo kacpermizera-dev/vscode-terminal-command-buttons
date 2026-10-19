@@ -6,11 +6,29 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			// Opens test-workspace with sample buttons, for testing changes locally
+			"name": "Run Extension (test workspace)",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				// Old build installed under a different publisher ID registers the same views
+				"--disable-extension=ebover.terminal-command-buttons",
+				"${workspaceFolder}/test-workspace"
+			],
+			"outFiles": [
+				"${workspaceFolder}/dist/**/*.js"
+			],
+			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				// Old build installed under a different publisher ID registers the same views
+				"--disable-extension=ebover.terminal-command-buttons"
 			],
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"

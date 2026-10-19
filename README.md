@@ -127,7 +127,7 @@ Access these commands via the Command Palette:
 1. Clone the repository
 2. Run `npm install`
 3. Run `npm run compile`
-4. Press `F5` to open a new Extension Development Host window
+4. Press `F5` to open a new Extension Development Host window. The default **Run Extension (test workspace)** configuration opens `test-workspace/` with sample buttons
 
 ### Project Structure
 
