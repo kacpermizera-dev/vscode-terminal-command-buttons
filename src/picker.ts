@@ -3,6 +3,7 @@ import { ButtonStore, ScopedButton } from "./buttons";
 import { runButton } from "./inputs";
 import { Runner } from "./runner";
 import { formatStatus } from "./runStatus";
+import { arrangeButtons } from "./sections";
 
 interface RunItem extends vscode.QuickPickItem {
   button?: ScopedButton;
@@ -37,19 +38,21 @@ export async function showRunPicker(
     return;
   }
 
-  const workspace = buttons.filter((b) => b.scope === "workspace");
-  const global = buttons.filter((b) => b.scope === "global");
+  // Te same sekcje co w widoku, spłaszczone do separatorów "Zakres · Grupa"
+  const arranged = arrangeButtons(buttons);
+  const bothScopes = new Set(arranged.map((a) => a.button.scope)).size > 1;
   const items: RunItem[] = [];
-  // Separatory tylko, gdy są obie grupy
-  const grouped = workspace.length > 0 && global.length > 0;
-  if (grouped) {
-    items.push({ label: "This workspace", kind: vscode.QuickPickItemKind.Separator });
-  }
-  items.push(...workspace.map((b) => toItem(b, runner, now)));
-  if (grouped) {
-    items.push({ label: "All workspaces", kind: vscode.QuickPickItemKind.Separator });
-  }
-  items.push(...global.map((b) => toItem(b, runner, now)));
+  let section: string | undefined;
+  arranged.forEach(({ button, section: buttonSection, scopeLabel, group }) => {
+    if (buttonSection !== section) {
+      section = buttonSection;
+      const label = [bothScopes ? scopeLabel : "", group].filter(Boolean).join(" · ");
+      if (label) {
+        items.push({ label, kind: vscode.QuickPickItemKind.Separator });
+      }
+    }
+    items.push(toItem(button, runner, now));
+  });
 
   const picked = await vscode.window.showQuickPick(items, {
     title: "Run Command Button",

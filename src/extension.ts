@@ -5,7 +5,26 @@ import { GitAliases } from "./gitAliases";
 import { runButton } from "./inputs";
 import { showRunPicker } from "./picker";
 import { Runner } from "./runner";
+import { PinnedButtons } from "./statusBar";
 import { TerminalButtonsProvider } from "./view";
+
+const WELCOME_SHOWN_KEY = "welcomeShown";
+
+// Jednorazowo: główny wyróżnik wtyczki (widok obok terminala) jest schowany za ikoną w nagłówku
+async function offerDockToTerminal(memory: vscode.Memento) {
+  if (memory.get(WELCOME_SHOWN_KEY)) {
+    return;
+  }
+  await memory.update(WELCOME_SHOWN_KEY, true);
+  const answer = await vscode.window.showInformationMessage(
+    "Show Command Buttons next to the terminal?",
+    "Show next to terminal",
+    "Not now"
+  );
+  if (answer === "Show next to terminal") {
+    await vscode.commands.executeCommand("terminalCommandButtons.dockToTerminal");
+  }
+}
 
 // Kontekst prawego kliknięcia na przycisku (data-vscode-context w webview)
 interface ButtonContext {
@@ -21,7 +40,12 @@ export function activate(context: vscode.ExtensionContext) {
   const gitAliases = new GitAliases();
   // Ostatnie wartości ${input:…} pamiętamy niezależnie od workspace
   const memory = context.globalState;
-  context.subscriptions.push(store, runner, gitAliases);
+  context.subscriptions.push(
+    store,
+    runner,
+    gitAliases,
+    new PinnedButtons(store, runner)
+  );
 
   // Rejestracja providerów webview: Activity Bar i panel dolny
   const providers = new Map<string, TerminalButtonsProvider>();
@@ -103,6 +127,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       await store.save({ name, command });
     }
+  );
+
+  // Zwinięcie / rozwinięcie wszystkich sekcji. view/title nie podaje, z którego widoku
+  // kliknięto, więc wysyłamy do obu - schowany widok nic nie zrobi.
+  const toggleCollapseAll = vscode.commands.registerCommand(
+    "terminalCommandButtons.toggleCollapseAll",
+    () => providers.forEach((provider) => provider.toggleCollapseAll())
   );
 
   // Przełączenie układu ikony / lista
@@ -209,6 +240,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     openButtonsPanel,
     addButton,
+    toggleCollapseAll,
     toggleLayout,
     runPicker,
     manageGitAliases,
@@ -221,6 +253,9 @@ export function activate(context: vscode.ExtensionContext) {
     deleteButtonCommand,
     dockToTerminal
   );
+
+  // Po rejestracji komend, bo odpowiedź woła dockToTerminal
+  offerDockToTerminal(memory);
 }
 
 export function deactivate() {}

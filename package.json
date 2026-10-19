@@ -2,7 +2,7 @@
   "name": "terminal-command-buttons",
   "displayName": "Terminal Command Buttons",
   "description": "Add configurable command buttons to VS Code terminal",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "kacpermizera-dev",
   "license": "MIT",
   "repository": {
@@ -55,6 +55,12 @@
         "command": "terminalCommandButtons.addButton",
         "title": "Add New Command Button",
         "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.toggleCollapseAll",
+        "title": "Collapse / Expand All",
+        "category": "Terminal Command Buttons",
+        "icon": "$(collapse-all)"
       },
       {
         "command": "terminalCommandButtons.toggleLayout",
@@ -177,6 +183,18 @@
                 "type": "string",
                 "description": "Codicon name shown on the button, e.g. git-branch, play, sync (https://microsoft.github.io/vscode-codicons/dist/codicon.html)"
               },
+              "group": {
+                "type": "string",
+                "description": "Group shown as a section in the view, e.g. Git or Build"
+              },
+              "confirm": {
+                "type": "boolean",
+                "description": "Ask before running the command"
+              },
+              "pinned": {
+                "type": "boolean",
+                "description": "Also show the button in the status bar"
+              },
               "terminal": {
                 "type": "string",
                 "description": "Name of a terminal used only by this button, e.g. dev. Created when needed. Without it the command runs in the active terminal."
@@ -222,6 +240,10 @@
                       },
                       "description": "Options for pickString"
                     },
+                    "optionsFrom": {
+                      "type": "string",
+                      "description": "Shell command for pickString; each line of its output is an option, e.g. git branch --format=%(refname:short)"
+                    },
                     "password": {
                       "type": "boolean",
                       "description": "Hide the typed value and do not remember it"
@@ -254,6 +276,11 @@
     },
     "menus": {
       "view/title": [
+        {
+          "command": "terminalCommandButtons.toggleCollapseAll",
+          "when": "view == terminalCommandButtons.panelView || view == terminalCommandButtons.buttonsView",
+          "group": "navigation@9"
+        },
         {
           "command": "terminalCommandButtons.manageGitAliases",
           "when": "view == terminalCommandButtons.panelView || view == terminalCommandButtons.buttonsView",

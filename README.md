@@ -19,6 +19,9 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 - **🔤 Variables**: `${input:name}` asks for a value when you click; `${file}`, `${workspaceFolder}`, `${selectedText}` and more come from the editor
 - **🗂️ Global or Per Workspace**: Keep a button everywhere, or only in the current workspace
 - **⏹️ Own Terminal, Stop / Restart**: Give a long-running command (dev server, watcher) its own terminal and stop or restart it from the button
+- **📁 Groups**: Sort buttons into groups such as Git or Build; collapse them in the list layout
+- **📌 Status Bar**: Pin your most used buttons to the status bar
+- **✋ Ask Before Running**: A confirmation for commands like `git push --force`
 - **🎨 Color Coding**: Pick a color from the palette or a custom one
 - **🔒 Nothing in Your Repository**: Buttons live in VS Code (user settings and workspace storage), never in the project's files
 
@@ -41,7 +44,7 @@ cd vscode-terminal-command-buttons
 npm install
 npm run package
 npx @vscode/vsce package
-code --install-extension terminal-command-buttons-0.3.0.vsix
+code --install-extension terminal-command-buttons-0.4.0.vsix
 ```
 
 ## 🚀 Quick Start
@@ -60,7 +63,10 @@ code --install-extension terminal-command-buttons-0.3.0.vsix
    - **Command**: Command to execute (e.g., `ls -la`)
    - **Icon** (optional): A [codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) name (e.g., `git-branch`); without it the button shows the name's initials
    - **Color**: Pick one from the palette, or the rainbow tile for a custom color
+   - **Group** (optional): A section in the view, e.g. `Git`; existing groups are suggested
    - **Only in this workspace** (optional): Show the button only in the folder or workspace that is open now
+   - **Ask before running** (optional): Confirm first, showing the command with its variables filled in
+   - **Show in status bar** (optional): Also put the button in the status bar
    - **Advanced** (optional): A terminal of its own, see below
 3. Click **"Add"**
 4. Click your new button to execute the command!
@@ -87,9 +93,17 @@ Add any command you use frequently:
 - **Add New**: Use the **+** tile or Command Palette
 - **Organize**: Use different colors and icons to group related commands
 
+### Groups
+
+Give buttons a **Group** in the form (e.g. Git, Build, Docker) to show them in sub-sections. Groups live inside **This workspace** / **All workspaces**: buttons without a group stay at the top of their part, groups follow in the order of their first button, so adding a group never moves the other buttons. Click a header to collapse it: **This workspace** / **All workspaces** in both layouts, groups in the list layout. **Collapse / Expand All** in the view header collapses everything, or expands it again when all is collapsed. The **Run Command Button…** picker uses the same order.
+
+### Status Bar
+
+**Show in status bar** also puts the button in the status bar at the bottom of the window, on the left (next to the git branch), with its icon and name. Click it to run the button. With shell integration the icon spins while the command runs and a failed last run turns the item red; in `cmd.exe` the item stays plain, because the result is unknown.
+
 ### Global and Workspace Buttons
 
-Each button is either shown in **all workspaces** (the default) or **only in this workspace** (the checkbox in the form). When you have both kinds, the view groups them: workspace buttons first, then global ones.
+Each button is either shown in **all workspaces** (the default) or **only in this workspace** (the checkbox in the form). When you have both kinds, the view shows workspace buttons first, then global ones, each with its own groups.
 
 Nothing is written to your project:
 
@@ -116,6 +130,7 @@ Other `${...}` text, such as `${HOME}` in bash, is left alone for the shell. Val
 
 - **Text**: a text box when you click the button
 - **List**: pick one of the options you enter, separated by commas (e.g. `main, develop`)
+- **List from command**: pick one line of a command's output, e.g. `git branch --format=%(refname:short)` for your branches. The command runs in the workspace folder with your system shell (`cmd.exe` on Windows) and has 5 seconds to finish
 - **Default** (optional): the first suggestion; after that your last answer is suggested
 
 In user `settings.json` the same is stored as `inputs`, like in `tasks.json`; there you can also add a `description` or `"password": true`.
@@ -223,6 +238,8 @@ src/
 ├── runStatus.ts          # Status types and formatting
 ├── variables.ts          # ${...} variables: parsing, substitution, inputs validation
 ├── inputs.ts             # Asks for ${input:…} values, runs a button
+├── sections.ts           # Groups and scopes as sections of the view
+├── statusBar.ts          # Buttons pinned to the status bar
 ├── gitAliases.ts         # Reads, parses and writes git aliases
 ├── aliasManager.ts       # "Git Aliases…" list with add / edit / delete
 ├── picker.ts             # "Run Command Button…" quick pick

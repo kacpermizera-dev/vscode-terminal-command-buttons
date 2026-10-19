@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { ButtonStore, getLayout } from "./buttons";
+import { ButtonStore, getLayout, groupNames } from "./buttons";
+import { arrangeButtons } from "./sections";
 import { GitAliases, findAliasForCommand } from "./gitAliases";
 import { runButton } from "./inputs";
 import { Runner } from "./runner";
@@ -116,9 +117,17 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
         }
       });
 
+      // Przyciski już ułożone: zakres, w nim grupy; webview tylko rysuje nagłówki
+      const arranged = arrangeButtons(buttons).map(({ button, section, group }) => ({
+        ...button,
+        section,
+        group,
+      }));
+
       this._view.webview.postMessage({
         type: "buttonsUpdate",
-        buttons,
+        buttons: arranged,
+        groups: groupNames(buttons),
         layout: getLayout(),
         hasWorkspace: this._store.hasWorkspace,
         legacyCount: this._store.showLegacyNotice ? this._store.legacyCount : 0,
@@ -141,6 +150,11 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
   // Otwarcie formularza edycji w tym widoku
   public showEditForm(buttonId: string) {
     this._view?.webview.postMessage({ type: "editButton", buttonId });
+  }
+
+  // Przycisk w nagłówku widoku: zwiń / rozwiń wszystkie sekcje
+  public toggleCollapseAll() {
+    this._view?.webview.postMessage({ type: "toggleCollapseAll" });
   }
 
   // Generowanie HTML dla webview
@@ -234,12 +248,26 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
                     <div class="hue" id="hue"><div class="hue-thumb" id="hueThumb"></div></div>
                 </div>
             </div>
+            <div class="field">
+                <label for="group">Group</label>
+                <input id="group" list="groupList" placeholder="e.g. Git, Build" autocomplete="off">
+            </div>
             <div class="field field-full" id="scopeField">
                 <label class="checkbox">
                     <input type="checkbox" id="workspaceOnly">
                     Only in this workspace
                 </label>
                 <div class="field-hint" id="scopeHint"></div>
+            </div>
+            <div class="field field-full checkbox-row">
+                <label class="checkbox">
+                    <input type="checkbox" id="confirm">
+                    Ask before running
+                </label>
+                <label class="checkbox">
+                    <input type="checkbox" id="pinned">
+                    Show in status bar
+                </label>
             </div>
         </div>
         <details class="advanced" id="advanced">
@@ -253,6 +281,7 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
             </div>
         </details>
         <datalist id="iconList"></datalist>
+        <datalist id="groupList"></datalist>
         <div class="error" id="error"></div>
         <div class="actions">
             <button type="button" class="secondary" id="cancel">Cancel</button>

@@ -12,6 +12,18 @@ export interface RunOptions {
   key?: string;
   // Nazwany terminal tylko dla tego przycisku; brak = aktywny terminal
   terminal?: string;
+  // Nazwa przycisku z "Ask before running" - "Powtórz" też pyta
+  confirm?: string;
+}
+
+// Modalne "Run …?" z komendą po podstawieniu zmiennych
+export async function confirmRun(name: string, command: string): Promise<boolean> {
+  const answer = await vscode.window.showWarningMessage(
+    `Run "${name}"?`,
+    { modal: true, detail: command },
+    "Run"
+  );
+  return answer === "Run";
 }
 
 interface LastRun {
@@ -159,9 +171,14 @@ export class Runner implements vscode.Disposable {
 
   // "Powtórz" uruchamia dokładnie tę samą komendę, z już podstawionymi zmiennymi
   public async rerunLast() {
-    if (this._last) {
-      await this.run(this._last.command, this._last.options);
+    const last = this._last;
+    if (!last) {
+      return;
     }
+    if (last.options.confirm && !(await confirmRun(last.options.confirm, last.command))) {
+      return;
+    }
+    await this.run(last.command, last.options);
   }
 
   // Ctrl+C w terminalu, w którym działa komenda

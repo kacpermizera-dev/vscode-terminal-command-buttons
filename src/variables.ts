@@ -7,8 +7,22 @@ export interface ButtonInput {
   description?: string;
   default?: string;
   options?: string[];
+  // Komenda shella, której wynik (linia = opcja) daje listę dla pickString
+  optionsFrom?: string;
   // Wartość ukryta przy wpisywaniu i niezapamiętywana
   password?: boolean;
+}
+
+// Opcje z wyniku komendy: niepuste linie, bez powtórzeń, bez znacznika "* " (np. git branch)
+export function parseOptionLines(output: string): string[] {
+  const options: string[] = [];
+  for (const line of output.split(/\r?\n/)) {
+    const option = line.replace(/^\*\s+/, "").trim();
+    if (option && !options.includes(option)) {
+      options.push(option);
+    }
+  }
+  return options;
 }
 
 // Tylko znane nazwy - ${HOME} czy ${PATH} w bashu zostają nietknięte
@@ -82,12 +96,14 @@ export function sanitizeInputs(value: unknown): ButtonInput[] | undefined {
     }
     const description = optionalString(raw.description);
     const defaultValue = optionalString(raw.default);
+    const optionsFrom = optionalString(raw.optionsFrom)?.trim();
     inputs.push({
       id: raw.id,
       ...(raw.type ? { type: raw.type } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(defaultValue !== undefined ? { default: defaultValue } : {}),
       ...(raw.options ? { options: raw.options as string[] } : {}),
+      ...(optionsFrom ? { optionsFrom } : {}),
       ...(raw.password === true ? { password: true } : {}),
     });
   }

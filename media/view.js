@@ -46,6 +46,9 @@ const iconPreview = document.getElementById('iconPreview');
 const errorEl = document.getElementById('error');
 const saveBtn = document.getElementById('save');
 const workspaceOnlyInput = document.getElementById('workspaceOnly');
+const groupInput = document.getElementById('group');
+const confirmInput = document.getElementById('confirm');
+const pinnedInput = document.getElementById('pinned');
 const scopeHint = document.getElementById('scopeHint');
 const advancedEl = document.getElementById('advanced');
 const terminalInput = document.getElementById('terminal');
@@ -165,6 +168,7 @@ window.addEventListener('message', event => {
             layout = message.layout === 'list' ? 'list' : 'icons';
             hasWorkspace = !!message.hasWorkspace;
             renderLegacyNotice(message.legacyCount || 0);
+            fillGroupList(message.groups || []);
             aliasHints = message.aliasHints || {};
             statuses = message.statuses || {};
             clockOffset = Date.now() - message.now;
@@ -177,6 +181,9 @@ window.addEventListener('message', event => {
             break;
         case 'editButton':
             openForm(buttons.find(b => b.id === message.buttonId));
+            break;
+        case 'toggleCollapseAll':
+            toggleCollapseAll();
             break;
     }
 });
@@ -218,14 +225,28 @@ function render() {
     buttonsEl.className = 'buttons ' + layout;
     buttonsEl.replaceChildren();
 
-    // Nagłówki grup tylko, gdy są przyciski i z tego workspace, i globalne
-    const grouped = buttons.some(b => b.scope === 'workspace') && buttons.some(b => b.scope !== 'workspace');
+    // Kolejność (zakres, w nim grupy) wylicza rozszerzenie. Nagłówek zakresu tylko, gdy są oba;
+    // nagłówek grupy zawsze, gdy przycisk ma grupę.
+    const bothScopes = new Set(buttons.map(b => b.scope)).size > 1;
     let currentScope = null;
+    let currentSection = null;
 
     buttons.forEach(button => {
-        if (grouped && button.scope !== currentScope) {
-            currentScope = button.scope;
-            buttonsEl.append(createGroupLabel(currentScope));
+        if (bothScopes && button.scope !== currentScope) {
+            buttonsEl.append(createScopeLabel(button.scope));
+        }
+        currentScope = button.scope;
+        // Zwinięty zakres chowa wszystko w nim, także nagłówki grup
+        if (bothScopes && collapsed.has(scopeKey(button.scope))) {
+            return;
+        }
+        if (button.group && button.section !== currentSection) {
+            buttonsEl.append(createGroupLabel(button.section, button.group));
+        }
+        currentSection = button.section;
+        // Zwinięta grupa w liście - przyciski schowane, nagłówek zostaje
+        if (button.group && layout === 'list' && collapsed.has(button.section)) {
+            return;
         }
 
         // div zamiast <button>, bo w wierszu listy są zagnieżdżone akcje edit / delete
@@ -314,16 +335,131 @@ document.getElementById('legacyKeep').addEventListener('click', () => {
     vscode.postMessage({ type: 'dismissLegacy' });
 });
 
-// W liście nagłówek grupy, w ikonach pionowa kreska z opisem w dymku
-function createGroupLabel(scope) {
-    const label = scope === 'workspace' ? 'This workspace' : 'All workspaces';
+// Zwinięte sekcje listy, pamiętane w stanie webview (przetrwa schowanie widoku)
+const collapsed = new Set((vscode.getState() || {}).collapsed || []);
+
+function scopeKey(scope) {
+    return 'scope:' + scope;
+}
+
+function saveCollapsed() {
+    vscode.setState({ ...(vscode.getState() || {}), collapsed: Array.from(collapsed) });
+}
+
+function toggleSection(section) {
+    if (collapsed.has(section)) {
+        collapsed.delete(section);
+    } else {
+        collapsed.add(section);
+    }
+    saveCollapsed();
+    render();
+    const header = Array.from(buttonsEl.querySelectorAll('[data-section]'))
+        .find(el => el.dataset.section === section);
+    if (header) {
+        header.focus();
+    }
+}
+
+// Sekcje, które da się teraz zwinąć: zakresy (gdy są oba) i grupy w liście
+function collapsibleSections() {
+    const keys = [];
+    if (new Set(buttons.map(b => b.scope)).size > 1) {
+        buttons.forEach(b => {
+            if (!keys.includes(scopeKey(b.scope))) {
+                keys.push(scopeKey(b.scope));
+            }
+        });
+    }
+    if (layout === 'list') {
+        buttons.forEach(b => {
+            if (b.group && !keys.includes(b.section)) {
+                keys.push(b.section);
+            }
+        });
+    }
+    return keys;
+}
+
+// Przycisk w nagłówku widoku: zwija wszystko, a gdy wszystko jest zwinięte - rozwija
+function toggleCollapseAll() {
+    const keys = collapsibleSections();
+    if (keys.length === 0) {
+        return;
+    }
+    if (keys.every(key => collapsed.has(key))) {
+        keys.forEach(key => collapsed.delete(key));
+    } else {
+        keys.forEach(key => collapsed.add(key));
+    }
+    saveCollapsed();
+    render();
+}
+
+// Separator w ikonach: pionowa kreska z nazwą w dymku
+function createSeparator(className, label) {
     const el = document.createElement('div');
-    el.className = 'group-label';
+    el.className = className;
     el.setAttribute('role', 'separator');
     el.setAttribute('aria-label', label);
     el.title = label;
     el.append(createText('group-text', label));
     return el;
+}
+
+// Nagłówek, który zwija sekcję: strzałka, nazwa, przy zwiniętej liczba przycisków
+function createToggleHeader(className, section, label, count) {
+    const isCollapsed = collapsed.has(section);
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = className;
+    el.dataset.section = section;
+    el.setAttribute('aria-expanded', String(!isCollapsed));
+    const chevron = document.createElement('span');
+    chevron.className = 'codicon codicon-chevron-' + (isCollapsed ? 'right' : 'down');
+    chevron.setAttribute('aria-hidden', 'true');
+    el.append(chevron, createText('group-text', label));
+    if (isCollapsed) {
+        el.append(createText('group-count', String(count)));
+    }
+    el.addEventListener('click', () => toggleSection(section));
+    return el;
+}
+
+// Nagłówek zakresu "This workspace" / "All workspaces", zwijany w obu układach
+function createScopeLabel(scope) {
+    return createToggleHeader(
+        'scope-label',
+        scopeKey(scope),
+        scope === 'workspace' ? 'This workspace' : 'All workspaces',
+        buttons.filter(b => b.scope === scope).length
+    );
+}
+
+// W liście zwijany nagłówek grupy, w ikonach pionowa kreska z nazwą w dymku
+function createGroupLabel(section, label) {
+    if (layout !== 'list') {
+        const el = createSeparator('group-label', label);
+        el.dataset.section = section;
+        return el;
+    }
+    return createToggleHeader(
+        'group-label',
+        section,
+        label,
+        buttons.filter(b => b.section === section).length
+    );
+}
+
+// Podpowiedzi w polu Group: nazwy już używanych grup
+function fillGroupList(groups) {
+    const list = document.getElementById('groupList');
+    list.replaceChildren();
+    groups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group;
+        list.append(option);
+    });
 }
 
 function runButton(button) {
@@ -385,7 +521,7 @@ function attachDrag(el, button) {
     });
     el.addEventListener('dragover', (e) => {
         const dragged = dragId && buttons.find(b => b.id === dragId);
-        if (!dragged || dragId === button.id || dragged.scope !== button.scope) {
+        if (!dragged || dragId === button.id || !sameSection(dragged, button)) {
             return;
         }
         e.preventDefault();
@@ -404,6 +540,11 @@ function attachDrag(el, button) {
     });
 }
 
+// Przeciąganie tylko w obrębie sekcji i zakresu - zmianę grupy lub zakresu robi formularz
+function sameSection(a, b) {
+    return a.section === b.section && a.scope === b.scope;
+}
+
 function moveButton(fromId, toId, after) {
     if (!fromId || fromId === toId) {
         return;
@@ -411,8 +552,7 @@ function moveButton(fromId, toId, after) {
     const moved = buttons.find(b => b.id === fromId);
     const rest = buttons.filter(b => b.id !== fromId);
     const index = rest.findIndex(b => b.id === toId);
-    // Przenoszenie między grupami zmienia zakres - to robi formularz, nie przeciąganie
-    if (!moved || index < 0 || rest[index].scope !== moved.scope) {
+    if (!moved || index < 0 || !sameSection(rest[index], moved)) {
         return;
     }
     rest.splice(after ? index + 1 : index, 0, moved);
@@ -550,7 +690,8 @@ function showTooltip(anchor, name, command, button) {
     const where = button ? [
         button.legacy ? 'Saved in .vscode/settings.json'
             : button.scope === 'workspace' ? 'This workspace only' : '',
-        button.terminal ? 'Terminal: ' + button.terminal : ''
+        button.terminal ? 'Terminal: ' + button.terminal : '',
+        button.confirm ? 'Asks before running' : ''
     ].filter(Boolean).join(' · ') : '';
     if (where) {
         tooltipEl.append(createText('tooltip-meta', where));
@@ -636,13 +777,18 @@ function openForm(button) {
         ? "Saved inside VS Code, not in the project's files."
         : 'Open a folder to keep a button for one workspace only.';
     terminalInput.value = button && button.terminal ? button.terminal : '';
+    groupInput.value = button && button.group ? button.group : '';
+    confirmInput.checked = !!button && !!button.confirm;
+    pinnedInput.checked = !!button && !!button.pinned;
     // Advanced rozwinięte, gdy przycisk już coś w nim ma
     advancedEl.open = !!terminalInput.value;
     questionDefs = {};
     (button && button.inputs || []).forEach(input => {
+        const kind = input.type !== 'pickString' ? 'text' : input.optionsFrom ? 'command' : 'list';
         questionDefs[input.id] = {
-            list: input.type === 'pickString',
+            kind: kind,
             options: (input.options || []).join(', '),
+            optionsFrom: input.optionsFrom || '',
             default: input.default || '',
             description: input.description,
             password: input.password
@@ -674,14 +820,27 @@ function splitOptions(text) {
     return (text || '').split(',').map(o => o.trim()).filter(Boolean);
 }
 
-// Wiersz na każde ${input:…} z komendy: Text albo List z opcjami, plus wartość domyślna
+function createQuestionInput(className, placeholder, label, value) {
+    const input = document.createElement('input');
+    input.className = className;
+    input.placeholder = placeholder;
+    input.setAttribute('aria-label', label);
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.value = value;
+    return input;
+}
+
+// Wiersz na każde ${input:…} z komendy: Text, List z opcjami albo lista z wyniku komendy,
+// plus wartość domyślna
 function renderQuestions() {
     const ids = inputIds(commandInput.value);
     questionsField.hidden = ids.length === 0;
     questionsEl.replaceChildren();
 
     ids.forEach(id => {
-        const def = questionDefs[id] || (questionDefs[id] = { list: false, options: '', default: '' });
+        const def = questionDefs[id] ||
+            (questionDefs[id] = { kind: 'text', options: '', optionsFrom: '', default: '' });
         const row = document.createElement('div');
         row.className = 'question';
 
@@ -689,46 +848,48 @@ function renderQuestions() {
 
         const type = document.createElement('select');
         type.setAttribute('aria-label', 'Answer type for ' + id);
-        [['text', 'Text'], ['list', 'List']].forEach(([value, label]) => {
+        [['text', 'Text'], ['list', 'List'], ['command', 'List from command']].forEach(([value, label]) => {
             const option = document.createElement('option');
             option.value = value;
             option.textContent = label;
             type.append(option);
         });
-        type.value = def.list ? 'list' : 'text';
+        type.value = def.kind;
 
-        const options = document.createElement('input');
-        options.className = 'question-options';
-        options.placeholder = 'main, develop';
-        options.setAttribute('aria-label', 'Options for ' + id + ', separated by commas');
-        options.autocomplete = 'off';
-        options.spellcheck = false;
-        options.value = def.options;
-        options.hidden = !def.list;
+        const options = createQuestionInput('question-options', 'main, develop',
+            'Options for ' + id + ', separated by commas', def.options);
+        const optionsFrom = createQuestionInput('question-options question-command',
+            'git branch --format=%(refname:short)',
+            'Command whose output lines are the options for ' + id, def.optionsFrom);
+        const defaultValue = createQuestionInput('question-default', 'Default (optional)',
+            'Default answer for ' + id, def.default);
 
-        const defaultValue = document.createElement('input');
-        defaultValue.className = 'question-default';
-        defaultValue.placeholder = 'Default (optional)';
-        defaultValue.setAttribute('aria-label', 'Default answer for ' + id);
-        defaultValue.autocomplete = 'off';
-        defaultValue.spellcheck = false;
-        defaultValue.value = def.default;
+        const showFields = () => {
+            options.hidden = def.kind !== 'list';
+            optionsFrom.hidden = def.kind !== 'command';
+        };
+        showFields();
 
         type.addEventListener('change', () => {
-            def.list = type.value === 'list';
-            options.hidden = !def.list;
-            if (def.list) {
+            def.kind = type.value;
+            showFields();
+            if (def.kind === 'list') {
                 options.focus();
+            } else if (def.kind === 'command') {
+                optionsFrom.focus();
             }
         });
         options.addEventListener('input', () => {
             def.options = options.value;
         });
+        optionsFrom.addEventListener('input', () => {
+            def.optionsFrom = optionsFrom.value;
+        });
         defaultValue.addEventListener('input', () => {
             def.default = defaultValue.value;
         });
 
-        row.append(name, type, options, defaultValue);
+        row.append(name, type, options, optionsFrom, defaultValue);
         questionsEl.append(row);
     });
 }
@@ -798,16 +959,24 @@ formEl.addEventListener('submit', (e) => {
 
     const inputs = [];
     for (const id of inputIds(command)) {
-        const def = questionDefs[id] || {};
+        const def = questionDefs[id] || { kind: 'text' };
         const options = splitOptions(def.options);
-        if (def.list && options.length === 0) {
+        const optionsFrom = (def.optionsFrom || '').trim();
+        if (def.kind === 'list' && options.length === 0) {
             errorEl.textContent = 'Add options for "' + id + '", separated by commas.';
             return;
         }
+        if (def.kind === 'command' && !optionsFrom) {
+            errorEl.textContent = 'Add a command that lists the options for "' + id + '".';
+            return;
+        }
         const input = { id: id };
-        if (def.list) {
+        if (def.kind === 'list') {
             input.type = 'pickString';
             input.options = options;
+        } else if (def.kind === 'command') {
+            input.type = 'pickString';
+            input.optionsFrom = optionsFrom;
         }
         if (def.default) {
             input.default = def.default;
@@ -834,7 +1003,10 @@ formEl.addEventListener('submit', (e) => {
             icon: icon,
             scope: hasWorkspace && workspaceOnlyInput.checked ? 'workspace' : 'global',
             terminal: terminalInput.value.trim(),
-            inputs: inputs
+            inputs: inputs,
+            group: groupInput.value.trim(),
+            confirm: confirmInput.checked,
+            pinned: pinnedInput.checked
         }
     });
     closeForm();

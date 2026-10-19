@@ -11,6 +11,12 @@ export interface CommandButton {
   // Nazwany terminal tylko dla tego przycisku; brak = aktywny terminal
   terminal?: string;
   inputs?: ButtonInput[];
+  // Nazwa grupy w widoku, np. Git, Build
+  group?: string;
+  // Pytanie "Run …?" przed uruchomieniem
+  confirm?: boolean;
+  // Przycisk także na pasku stanu
+  pinned?: boolean;
 }
 
 // global: ustawienia użytkownika, workspace: tylko w tym workspace
@@ -53,7 +59,21 @@ function toStored(button: CommandButton): CommandButton {
     ...(button.icon ? { icon: button.icon } : {}),
     ...(button.terminal ? { terminal: button.terminal } : {}),
     ...(button.inputs && button.inputs.length > 0 ? { inputs: button.inputs } : {}),
+    ...(button.group ? { group: button.group } : {}),
+    ...(button.confirm ? { confirm: true } : {}),
+    ...(button.pinned ? { pinned: true } : {}),
   };
+}
+
+// Istniejące nazwy grup, do podpowiedzi w formularzu
+export function groupNames(buttons: CommandButton[]): string[] {
+  const names: string[] = [];
+  buttons.forEach((b) => {
+    if (b.group && !names.includes(b.group)) {
+      names.push(b.group);
+    }
+  });
+  return names.sort((a, b) => a.localeCompare(b));
 }
 
 export class ButtonStore implements vscode.Disposable {
@@ -118,6 +138,7 @@ export class ButtonStore implements vscode.Disposable {
     const icon = typeof button.icon === "string" ? button.icon.trim() : "";
     const terminal =
       typeof button.terminal === "string" ? button.terminal.trim() : "";
+    const group = typeof button.group === "string" ? button.group.trim() : "";
     const saved: CommandButton = toStored({
       id: button.id || Date.now().toString(),
       name,
@@ -126,6 +147,9 @@ export class ButtonStore implements vscode.Disposable {
       icon,
       terminal,
       inputs,
+      group,
+      confirm: button.confirm === true,
+      pinned: button.pinned === true,
     });
 
     const existing = button.id ? this.find(button.id) : undefined;

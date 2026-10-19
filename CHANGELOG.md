@@ -4,6 +4,17 @@ All notable changes to the "terminal-command-buttons" extension will be document
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.4.0] - 2026-10-19
+
+### Added
+
+- **Groups**: a Group field in the form (existing names are suggested) shows buttons in sub-sections such as Git or Build, inside This workspace / All workspaces. Adding a group does not move the other buttons. The Run picker uses the same order.
+- Collapsible sections: This workspace / All workspaces in both layouts, groups in the list layout, and **Collapse / Expand All** in the view header.
+- **Ask before running**: a confirmation with the command as it will run, variables filled in. **Rerun Last Command** asks too.
+- **Show in status bar**: pinned buttons in the status bar, with a spinning icon while running and red after a failed run.
+- **List from command** for questions: the options are the lines of a command's output, e.g. `git branch --format=%(refname:short)`.
+- On first start, the extension offers to show the buttons next to the terminal.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
