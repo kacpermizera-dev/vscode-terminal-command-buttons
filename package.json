@@ -2,7 +2,7 @@
   "name": "terminal-command-buttons",
   "displayName": "Terminal Command Buttons",
   "description": "Add configurable command buttons to VS Code terminal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "kacpermizera-dev",
   "license": "MIT",
   "repository": {
@@ -61,6 +61,25 @@
         "title": "Toggle Icons / List Layout",
         "category": "Terminal Command Buttons",
         "icon": "$(list-flat)"
+      },
+      {
+        "command": "terminalCommandButtons.runPicker",
+        "title": "Run Command Button…",
+        "category": "Terminal Command Buttons",
+        "icon": "$(play)"
+      },
+      {
+        "command": "terminalCommandButtons.manageGitAliases",
+        "title": "Git Aliases…",
+        "category": "Terminal Command Buttons",
+        "icon": "$(source-control)"
+      },
+      {
+        "command": "terminalCommandButtons.rerunLast",
+        "title": "Rerun Last Command",
+        "category": "Terminal Command Buttons",
+        "icon": "$(debug-rerun)",
+        "enablement": "terminalCommandButtons.hasLast"
       },
       {
         "command": "terminalCommandButtons.runButton",
@@ -169,6 +188,11 @@
     "menus": {
       "view/title": [
         {
+          "command": "terminalCommandButtons.manageGitAliases",
+          "when": "view == terminalCommandButtons.panelView || view == terminalCommandButtons.buttonsView",
+          "group": "navigation@0"
+        },
+        {
           "command": "terminalCommandButtons.toggleLayout",
           "when": "view == terminalCommandButtons.panelView || view == terminalCommandButtons.buttonsView",
           "group": "navigation@1"
@@ -177,6 +201,22 @@
           "command": "terminalCommandButtons.dockToTerminal",
           "when": "view == terminalCommandButtons.panelView",
           "group": "navigation@2"
+        },
+        {
+          "command": "terminalCommandButtons.runPicker",
+          "when": "view == terminal",
+          "group": "navigation"
+        },
+        {
+          "command": "terminalCommandButtons.rerunLast",
+          "when": "view == terminal && terminalCommandButtons.hasLast",
+          "group": "navigation"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "terminalCommandButtons.runPicker",
+          "group": "navigation@10"
         }
       ],
       "webview/context": [
@@ -208,6 +248,10 @@
         {
           "command": "terminalCommandButtons.dockToTerminal",
           "when": "true"
+        },
+        {
+          "command": "terminalCommandButtons.rerunLast",
+          "when": "terminalCommandButtons.hasLast"
         },
         {
           "command": "terminalCommandButtons.runButton",

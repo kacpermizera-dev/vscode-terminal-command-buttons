@@ -13,6 +13,9 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 - **🪟 Next to the Terminal**: Keep the buttons in a split view right beside your terminal
 - **🧩 Icons or List**: Compact icon buttons with hover details, or a list with name and command
 - **⚙️ Easy Configuration**: Add, edit, delete and reorder buttons directly from the UI
+- **🚦 Run Status**: A dot on each button shows whether its last run is running, succeeded or failed
+- **▶️ Terminal Toolbar**: **Run Command Button…** and **Rerun Last Command** right in the terminal's title bar
+- **🌿 Git Aliases**: See your git aliases and what they expand to, add, edit or delete them without touching `.gitconfig`
 - **🎨 Color Coding**: Pick a color from the palette or a custom one
 - **💾 Persistent Storage**: Your buttons are saved in workspace/user settings
 - **🔗 Terminal Integration**: Commands execute in your active terminal
@@ -36,7 +39,7 @@ cd vscode-terminal-command-buttons
 npm install
 npm run package
 npx @vscode/vsce package
-code --install-extension terminal-command-buttons-0.1.0.vsix
+code --install-extension terminal-command-buttons-0.2.0.vsix
 ```
 
 ## 🚀 Quick Start
@@ -73,12 +76,38 @@ Add any command you use frequently:
 ### Managing Buttons
 
 - **Execute**: Click any button to run its command (or focus it and press `Enter`)
-- **Details**: Hover a button in the icon layout to see its name and command
+- **Details**: Hover a button to see its full command, the git alias it calls and its last run
 - **Edit / Delete**: Right-click a button, or use the pencil and trash icons on hover in the list layout
 - **Reorder**: Drag a button to a new position, or focus it and press `Alt+Arrow`
 - **Layout**: Switch between icons and list with the layout icon in the view header
 - **Add New**: Use the **+** tile or Command Palette
 - **Organize**: Use different colors and icons to group related commands
+
+### Run Status
+
+After you run a button, a small dot shows how its last run went: pulsing while it runs, green when it exited with code 0, red when it failed. Hover the button for the exit code, duration and when it ran.
+
+The status comes from VS Code's [terminal shell integration](https://code.visualstudio.com/docs/terminal/shell-integration) (bash, zsh, fish, PowerShell, Git Bash). In shells without it, such as `cmd.exe`, the dot stays grey: the command was sent, but its result is unknown.
+
+### Terminal Toolbar
+
+Two icons appear in the terminal panel's title bar:
+
+- **▶ Run Command Button…** opens a picker with all your buttons and their last status
+- **↻ Rerun Last Command** runs the last command sent by the extension again
+
+Both are also in the Command Palette; **Run Command Button…** is also in the terminal's right-click menu.
+
+### Git Aliases
+
+**Git Aliases…** (the branch icon in the buttons view header) lists your aliases from `git config`, grouped into repository (`.git/config`) and global (`~/.gitconfig`), with what each one expands to. Aliases starting with `!` run a shell command and are marked as such.
+
+- **Add**: pick **Add alias…**, enter a name and a value, and choose global or this repository
+- **Edit**: select an alias (or its pencil icon) to change its name or value
+- **Delete**: use the trash icon
+- **Open file**: open the config file the alias comes from; system aliases can only be viewed
+
+If a button's command calls an alias (e.g. `git lg -5`), its tooltip shows the alias expansion. In untrusted workspaces only your global aliases are read and edited, not the ones from the repository's `.git/config`.
 
 ## ⚙️ Configuration
 
@@ -114,6 +143,9 @@ Access these commands via the Command Palette:
 - **Terminal Command Buttons: Add New Command Button** - Add a button via input prompts
 - **Terminal Command Buttons: Show Buttons Next to Terminal** - Move the panel view next to the terminal
 - **Terminal Command Buttons: Toggle Icons / List Layout** - Switch the button layout
+- **Terminal Command Buttons: Run Command Button…** - Pick a button to run
+- **Terminal Command Buttons: Git Aliases…** - View, add, edit or delete git aliases
+- **Terminal Command Buttons: Rerun Last Command** - Run the last command again
 
 ## 📋 Requirements
 
@@ -133,9 +165,18 @@ Access these commands via the Command Palette:
 
 ```
 src/
-├── extension.ts          # Main extension logic
-└── test/
-    └── extension.test.ts # Extension tests
+├── extension.ts          # Activation, commands
+├── buttons.ts            # Reading and saving buttons in settings
+├── runner.ts             # Sends commands to the terminal, tracks run status
+├── runStatus.ts          # Status types and formatting
+├── gitAliases.ts         # Reads, parses and writes git aliases
+├── aliasManager.ts       # "Git Aliases…" list with add / edit / delete
+├── picker.ts             # "Run Command Button…" quick pick
+├── view.ts               # Webview provider (Activity Bar and panel)
+└── test/                 # Extension tests
+media/
+├── view.css              # Webview styles
+└── view.js               # Webview script
 ```
 
 ## 🤝 Contributing

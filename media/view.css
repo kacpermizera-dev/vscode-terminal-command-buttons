@@ -1,0 +1,615 @@
+/* Natywne kontrolki (np. lista podpowiedzi ikon) w kolorach motywu */
+body.vscode-light,
+body.vscode-high-contrast-light {
+    color-scheme: light;
+}
+
+body.vscode-dark,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) {
+    color-scheme: dark;
+}
+
+body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    margin: 0;
+    padding: 6px 8px;
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.buttons.list {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+}
+
+/* Tryb ikon: kwadratowy przycisk, kolor przycisku na ikonie i pasku pod nią */
+.cmd {
+    --btn-color: var(--vscode-foreground);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0 0 3px;
+    border: 1px solid var(--vscode-widget-border, transparent);
+    border-radius: 4px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--btn-color);
+    font: inherit;
+    cursor: pointer;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.cmd:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.cmd:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+
+.cmd::after {
+    content: "";
+    position: absolute;
+    left: 7px;
+    right: 7px;
+    bottom: 3px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--btn-color);
+}
+
+.cmd .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.cmd .initials {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.cmd .label,
+.cmd .command,
+.cmd .text {
+    display: none;
+}
+
+.cmd.add {
+    border-style: dashed;
+    border-color: var(--vscode-descriptionForeground);
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+}
+
+.cmd.add::after {
+    display: none;
+}
+
+/* Tryb listy: wiersz z ikoną, nazwą i komendą */
+.list .cmd {
+    width: 100%;
+    height: auto;
+    min-height: 26px;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 3px 8px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--vscode-foreground);
+    text-align: left;
+}
+
+.list .cmd:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.list .cmd::after {
+    left: 0;
+    right: auto;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    height: auto;
+}
+
+.list .cmd .icon {
+    flex: none;
+    width: 16px;
+    color: var(--btn-color);
+}
+
+/* Nazwa i komenda na wspólnej linii bazowej, cały blok wyśrodkowany w wierszu */
+.list .cmd .text {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.list .cmd .label {
+    display: inline;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.list .cmd .command {
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.list .cmd.add {
+    border-color: transparent;
+    color: var(--vscode-descriptionForeground);
+}
+
+.list .cmd.add .label {
+    font-weight: normal;
+}
+
+/* Uchwyt do przeciągania przy lewym pasku, tylko w liście */
+.cmd .grip {
+    display: none;
+}
+
+.list .cmd .grip {
+    display: inline-flex;
+    flex: none;
+    width: 12px;
+    margin: 0 -6px 0 -4px;
+    visibility: hidden;
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground);
+    cursor: grab;
+}
+
+.list .cmd:hover .grip,
+.list .cmd:focus-visible .grip {
+    visibility: visible;
+}
+
+/* Kropka statusu ostatniego uruchomienia: w ikonach w rogu, w liście przy prawej krawędzi */
+.status {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--vscode-descriptionForeground);
+}
+
+.status[hidden] {
+    display: none;
+}
+
+.icons .cmd .status {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+}
+
+.list .cmd .status {
+    margin-left: auto;
+}
+
+.list .cmd .status:not([hidden]) ~ .row-actions {
+    margin-left: 4px;
+}
+
+.status-running {
+    background: var(--vscode-progressBar-background, #0e70c0);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
+.status-success {
+    background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.status-error {
+    background: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+@keyframes pulse {
+    50% {
+        opacity: 0.3;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-running {
+        animation: none;
+    }
+}
+
+/* Akcje edit / delete w wierszu listy */
+.row-actions {
+    display: none;
+}
+
+/* focus-visible zamiast focus-within: po kliknięciu myszą akcje nie zostają na wierzchu */
+.list .cmd:hover .row-actions,
+.list .cmd:focus-visible .row-actions,
+.list .cmd:has(.icon-action:focus-visible) .row-actions {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    margin-left: auto;
+}
+
+.row-actions .icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-icon-foreground, var(--vscode-foreground));
+    cursor: pointer;
+}
+
+.row-actions .icon-action:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+
+.row-actions .icon-action:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+}
+
+/* Przeciąganie: wyszarzony element i linia w miejscu upuszczenia */
+.cmd.dragging {
+    opacity: 0.4;
+}
+
+.cmd.drop-before::before,
+.cmd.drop-after::before {
+    content: "";
+    position: absolute;
+    background: var(--vscode-focusBorder);
+}
+
+.icons .cmd.drop-before::before,
+.icons .cmd.drop-after::before {
+    top: 2px;
+    bottom: 2px;
+    width: 2px;
+}
+
+.icons .cmd.drop-before::before {
+    left: -5px;
+}
+
+.icons .cmd.drop-after::before {
+    right: -5px;
+}
+
+.list .cmd.drop-before::before,
+.list .cmd.drop-after::before {
+    left: 0;
+    right: 0;
+    height: 2px;
+}
+
+.list .cmd.drop-before::before {
+    top: -2px;
+}
+
+.list .cmd.drop-after::before {
+    bottom: -2px;
+}
+
+.tooltip {
+    position: fixed;
+    z-index: 10;
+    display: none;
+    max-width: min(360px, calc(100vw - 16px));
+    padding: 4px 8px;
+    border: 1px solid var(--vscode-editorHoverWidget-border);
+    border-radius: 3px;
+    background: var(--vscode-editorHoverWidget-background);
+    color: var(--vscode-editorHoverWidget-foreground);
+    box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+    pointer-events: none;
+}
+
+.tooltip-name,
+.tooltip-command,
+.tooltip-hint {
+    display: block;
+}
+
+.tooltip-name {
+    font-weight: 600;
+}
+
+.tooltip-command {
+    margin-top: 3px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
+    color: var(--vscode-textPreformat-foreground);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.tooltip-alias,
+.tooltip-status {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+}
+
+.tooltip-alias {
+    font-family: var(--vscode-editor-font-family);
+    color: var(--vscode-descriptionForeground);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* Kolor tekstu, nie tła - klasy status-* współdzielone z kropką */
+.tooltip-status.status-running,
+.tooltip-status.status-success,
+.tooltip-status.status-error {
+    background: none;
+    animation: none;
+}
+
+.tooltip-status.status-success {
+    color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.tooltip-status.status-error {
+    color: var(--vscode-errorForeground);
+}
+
+.tooltip-hint {
+    margin-top: 5px;
+    padding-top: 4px;
+    border-top: 1px solid var(--vscode-editorHoverWidget-border);
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* Formularz zastępuje przyciski, bo panel obok terminala jest niski */
+.form {
+    display: none;
+}
+
+body.editing .buttons {
+    display: none;
+}
+
+body.editing .form {
+    display: block;
+}
+
+.fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.field {
+    flex: 1 1 140px;
+    min-width: 0;
+}
+
+.field-command {
+    flex: 2 1 220px;
+}
+
+.field-color {
+    flex-basis: 100%;
+}
+
+.field label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.field input {
+    width: 100%;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 2px 6px;
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font: inherit;
+}
+
+.field input:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Pole z kwadratowym podglądem (ikona / kolor) wyrównanym do wysokości inputa */
+.input-with-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input-with-preview input {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-box {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
+    border-radius: 2px;
+    background: var(--vscode-input-background);
+    font-size: 16px;
+}
+
+.color-preview {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+}
+
+/* Własny wybór koloru - natywny picker na Windows otwiera jasne okno systemowe */
+.color-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.swatch {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--vscode-widget-border, transparent);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.swatch[aria-pressed="true"] {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+
+.swatch:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+
+.hex-field {
+    flex: none;
+    width: 120px;
+}
+
+.swatch.custom {
+    background: conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+
+/* Własny picker: pole nasycenie / jasność + pionowy pasek odcienia */
+.picker {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.picker[hidden] {
+    display: none;
+}
+
+.sv {
+    position: relative;
+    width: 180px;
+    height: 100px;
+    border-radius: 3px;
+    background-image:
+        linear-gradient(to top, #000, rgba(0, 0, 0, 0)),
+        linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.hue {
+    position: relative;
+    width: 14px;
+    height: 100px;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+    cursor: pointer;
+    touch-action: none;
+}
+
+.sv-thumb,
+.hue-thumb {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+.sv-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.hue-thumb {
+    left: -3px;
+    right: -3px;
+    height: 6px;
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.error {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--vscode-errorForeground);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.actions button {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 2px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.primary {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.primary:hover {
+    background: var(--vscode-button-hoverBackground);
+}
+
+.secondary {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.secondary:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
