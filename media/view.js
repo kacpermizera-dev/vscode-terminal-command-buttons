@@ -1,7 +1,6 @@
 const vscode = acquireVsCodeApi();
 const viewType = document.body.dataset.view;
 
-// Podpowiedzi w polu ikony, można wpisać dowolną nazwę codicon
 const ICONS = [
     'terminal', 'play', 'debug-start', 'debug-restart', 'run-all', 'stop-circle',
     'git-branch', 'git-commit', 'git-merge', 'git-pull-request', 'repo-pull', 'repo-push',
@@ -10,7 +9,6 @@ const ICONS = [
     'folder', 'file-code', 'search', 'zap', 'flame', 'history'
 ];
 
-// Kolory czytelne na ciemnym i jasnym motywie
 const COLORS = [
     '#3794ff', '#52baff', '#4ec9b0', '#89d185', '#cca700', '#d18616',
     '#f14c4c', '#f48771', '#c586c0', '#b180d7', '#cccccc', '#808080'
@@ -21,10 +19,8 @@ let layout = 'icons';
 let hasWorkspace = false;
 let editingId = null;
 let tooltipTimer;
-// Rozwinięcia aliasów gita i statusy uruchomień, oba po id przycisku
 let aliasHints = {};
 let statuses = {};
-// Różnica zegarów webview i rozszerzenia (np. przy zdalnym hoście)
 let clockOffset = 0;
 let tooltipAnchor = null;
 
@@ -56,7 +52,6 @@ const insertSelect = document.getElementById('insertVariable');
 const questionsField = document.getElementById('questionsField');
 const questionsEl = document.getElementById('questions');
 
-// Ustawienia pytań dla ${input:…} w edytowanej komendzie: id -> { list, options, default }
 let questionDefs = {};
 
 ICONS.forEach(icon => {
@@ -77,7 +72,6 @@ COLORS.forEach(color => {
     swatchesEl.append(swatch);
 });
 
-// Ostatnie pole palety rozwija własny picker
 const customSwatch = document.createElement('button');
 customSwatch.type = 'button';
 customSwatch.className = 'swatch custom';
@@ -134,7 +128,6 @@ function clamp01(value) {
     return Math.max(0, Math.min(1, value));
 }
 
-// Przeciąganie myszą po polu / pasku z przechwyceniem wskaźnika
 function trackPointer(el, onMove) {
     el.addEventListener('pointerdown', (e) => {
         el.setPointerCapture(e.pointerId);
@@ -198,7 +191,6 @@ function getInitials(name) {
     return initials.toUpperCase();
 }
 
-// Tylko textContent i style przez DOM - dane z ustawień nie trafiają do HTML
 function createIcon(icon, name) {
     const span = document.createElement('span');
     span.className = 'icon';
@@ -225,8 +217,6 @@ function render() {
     buttonsEl.className = 'buttons ' + layout;
     buttonsEl.replaceChildren();
 
-    // Kolejność (zakres, w nim grupy) wylicza rozszerzenie. Nagłówek zakresu tylko, gdy są oba;
-    // nagłówek grupy zawsze, gdy przycisk ma grupę.
     const bothScopes = new Set(buttons.map(b => b.scope)).size > 1;
     let currentScope = null;
     let currentSection = null;
@@ -236,7 +226,6 @@ function render() {
             buttonsEl.append(createScopeLabel(button.scope));
         }
         currentScope = button.scope;
-        // Zwinięty zakres chowa wszystko w nim, także nagłówki grup
         if (bothScopes && collapsed.has(scopeKey(button.scope))) {
             return;
         }
@@ -244,19 +233,16 @@ function render() {
             buttonsEl.append(createGroupLabel(button.section, button.group));
         }
         currentSection = button.section;
-        // Zwinięta grupa w liście - przyciski schowane, nagłówek zostaje
         if (button.group && layout === 'list' && collapsed.has(button.section)) {
             return;
         }
 
-        // div zamiast <button>, bo w wierszu listy są zagnieżdżone akcje edit / delete
         const el = document.createElement('div');
         el.className = 'cmd';
         el.tabIndex = 0;
         el.dataset.id = button.id;
         el.setAttribute('role', 'button');
         el.style.setProperty('--btn-color', button.color || '');
-        // aria-label i menu prawego kliknięcia (data-vscode-context) ustawia applyStatuses
 
         const grip = document.createElement('span');
         grip.className = 'grip codicon codicon-gripper';
@@ -269,7 +255,6 @@ function render() {
             createText('command', button.command)
         );
 
-        // Kropka statusu ostatniego uruchomienia, uzupełniana w applyStatuses
         const status = document.createElement('span');
         status.className = 'status';
         status.hidden = true;
@@ -316,7 +301,6 @@ function render() {
     buttonsEl.append(add);
 }
 
-// Belka o przyciskach z .vscode/settings.json, dopóki ich nie przeniesiesz albo nie wybierzesz "Keep"
 const legacyNotice = document.getElementById('legacyNotice');
 const legacyText = document.getElementById('legacyText');
 
@@ -335,7 +319,6 @@ document.getElementById('legacyKeep').addEventListener('click', () => {
     vscode.postMessage({ type: 'dismissLegacy' });
 });
 
-// Zwinięte sekcje listy, pamiętane w stanie webview (przetrwa schowanie widoku)
 const collapsed = new Set((vscode.getState() || {}).collapsed || []);
 
 function scopeKey(scope) {
@@ -361,7 +344,6 @@ function toggleSection(section) {
     }
 }
 
-// Sekcje, które da się teraz zwinąć: zakresy (gdy są oba) i grupy w liście
 function collapsibleSections() {
     const keys = [];
     if (new Set(buttons.map(b => b.scope)).size > 1) {
@@ -381,7 +363,6 @@ function collapsibleSections() {
     return keys;
 }
 
-// Przycisk w nagłówku widoku: zwija wszystko, a gdy wszystko jest zwinięte - rozwija
 function toggleCollapseAll() {
     const keys = collapsibleSections();
     if (keys.length === 0) {
@@ -396,7 +377,6 @@ function toggleCollapseAll() {
     render();
 }
 
-// Separator w ikonach: pionowa kreska z nazwą w dymku
 function createSeparator(className, label) {
     const el = document.createElement('div');
     el.className = className;
@@ -407,7 +387,6 @@ function createSeparator(className, label) {
     return el;
 }
 
-// Nagłówek, który zwija sekcję: strzałka, nazwa, przy zwiniętej liczba przycisków
 function createToggleHeader(className, section, label, count) {
     const isCollapsed = collapsed.has(section);
     const el = document.createElement('button');
@@ -426,7 +405,6 @@ function createToggleHeader(className, section, label, count) {
     return el;
 }
 
-// Nagłówek zakresu "This workspace" / "All workspaces", zwijany w obu układach
 function createScopeLabel(scope) {
     return createToggleHeader(
         'scope-label',
@@ -436,7 +414,6 @@ function createScopeLabel(scope) {
     );
 }
 
-// W liście zwijany nagłówek grupy, w ikonach pionowa kreska z nazwą w dymku
 function createGroupLabel(section, label) {
     if (layout !== 'list') {
         const el = createSeparator('group-label', label);
@@ -451,7 +428,6 @@ function createGroupLabel(section, label) {
     );
 }
 
-// Podpowiedzi w polu Group: nazwy już używanych grup
 function fillGroupList(groups) {
     const list = document.getElementById('groupList');
     list.replaceChildren();
@@ -467,7 +443,6 @@ function runButton(button) {
     vscode.postMessage({ type: 'runButton', buttonId: button.id });
 }
 
-// Akcje widoczne po najechaniu na wiersz w trybie listy; stop / restart tylko gdy komenda działa
 function createRowActions(button) {
     const wrap = document.createElement('span');
     wrap.className = 'row-actions';
@@ -491,7 +466,6 @@ function createRowActions(button) {
     return wrap;
 }
 
-// Zmiana kolejności przeciąganiem: w liście góra / dół wiersza, w ikonach lewa / prawa
 let dragId = null;
 
 function isAfter(el, e) {
@@ -540,7 +514,6 @@ function attachDrag(el, button) {
     });
 }
 
-// Przeciąganie tylko w obrębie sekcji i zakresu - zmianę grupy lub zakresu robi formularz
 function sameSection(a, b) {
     return a.section === b.section && a.scope === b.scope;
 }
@@ -574,7 +547,6 @@ function moveBy(id, delta) {
     }
 }
 
-// Status do dymka - te same teksty co formatStatus w src/runStatus.ts
 function formatDuration(ms) {
     const seconds = Math.max(0, ms) / 1000;
     if (seconds < 10) {
@@ -630,7 +602,6 @@ const STATUS_LABELS = {
     unknown: 'last run result unknown'
 };
 
-// Kropki statusu bez przebudowy przycisków
 function applyStatuses() {
     buttonsEl.querySelectorAll('.cmd[data-id]').forEach(el => {
         const button = buttons.find(b => b.id === el.dataset.id);
@@ -645,7 +616,6 @@ function applyStatuses() {
         el.classList.toggle('running', running);
         el.setAttribute('aria-label', button.name + ': ' + button.command +
             (status ? ', ' + STATUS_LABELS[status.state] : ''));
-        // Prawy klik: Run / Edit / Delete, a gdy komenda działa także Stop / Restart
         el.dataset.vscodeContext = JSON.stringify({
             webviewSection: 'terminalCommandButtons.button',
             buttonId: button.id,
@@ -659,7 +629,6 @@ function applyStatuses() {
     }
 }
 
-// Dymek z komendą, rozwinięciem aliasu i statusem w obu układach
 function attachTooltip(el, name, command, button) {
     const show = () => {
         clearTimeout(tooltipTimer);
@@ -674,7 +643,6 @@ function attachTooltip(el, name, command, button) {
 function showTooltip(anchor, name, command, button) {
     const alias = button && aliasHints[button.id];
     const status = button && statuses[button.id];
-    // W liście nazwa i komenda są w wierszu - sam "Add button" nie potrzebuje dymka
     if (layout !== 'icons' && !command) {
         hideTooltip();
         return;
@@ -707,7 +675,6 @@ function showTooltip(anchor, name, command, button) {
     }
     tooltipEl.style.display = 'block';
 
-    // Odświeżanie przy zmianie statusu i co sekundę, gdy komenda trwa
     clearTimeout(tooltipTimer);
     tooltipAnchor = { refresh: () => showTooltip(anchor, name, command, button) };
     if (status && status.state === 'running') {
@@ -746,7 +713,6 @@ function updateColorPreview() {
     const color = colorInput.value.trim().toLowerCase();
     colorPreview.style.backgroundColor = isHexColor(color) ? color : 'transparent';
     swatchesEl.querySelectorAll('.swatch').forEach(swatch => {
-        // Pole "custom" zaznaczone, gdy kolor spoza palety
         const pressed = swatch.dataset.color
             ? swatch.dataset.color === color
             : isHexColor(color) && !COLORS.includes(color);
@@ -754,7 +720,6 @@ function updateColorPreview() {
     });
 }
 
-// fromPicker: kolor z pickera - nie przeliczaj HSV z hex, żeby nie gubić odcienia przy szarościach
 function setColor(color, fromPicker) {
     colorInput.value = color;
     updateColorPreview();
@@ -770,7 +735,6 @@ function openForm(button) {
     nameInput.value = button ? button.name : '';
     commandInput.value = button ? button.command : '';
     iconInput.value = button && button.icon ? button.icon : '';
-    // Bez otwartego folderu checkbox zostaje widoczny, ale wyłączony - z wyjaśnieniem
     workspaceOnlyInput.disabled = !hasWorkspace;
     workspaceOnlyInput.checked = hasWorkspace && !!button && button.scope === 'workspace';
     scopeHint.textContent = hasWorkspace
@@ -780,7 +744,6 @@ function openForm(button) {
     groupInput.value = button && button.group ? button.group : '';
     confirmInput.checked = !!button && !!button.confirm;
     pinnedInput.checked = !!button && !!button.pinned;
-    // Advanced rozwinięte, gdy przycisk już coś w nim ma
     advancedEl.open = !!terminalInput.value;
     questionDefs = {};
     (button && button.inputs || []).forEach(input => {
@@ -805,7 +768,6 @@ function openForm(button) {
     nameInput.focus();
 }
 
-// Id pytań w kolejności wystąpienia, bez powtórzeń
 function inputIds(command) {
     const ids = [];
     for (const match of command.matchAll(/\$\{input:([\w-]+)\}/g)) {
@@ -831,8 +793,6 @@ function createQuestionInput(className, placeholder, label, value) {
     return input;
 }
 
-// Wiersz na każde ${input:…} z komendy: Text, List z opcjami albo lista z wyniku komendy,
-// plus wartość domyślna
 function renderQuestions() {
     const ids = inputIds(commandInput.value);
     questionsField.hidden = ids.length === 0;
@@ -894,7 +854,6 @@ function renderQuestions() {
     });
 }
 
-// Wstawienie zmiennej w miejscu kursora; przy pytaniu zaznaczamy nazwę do nadpisania
 function insertVariable(kind) {
     const value = commandInput.value;
     const start = commandInput.selectionStart ?? value.length;
@@ -981,7 +940,6 @@ formEl.addEventListener('submit', (e) => {
         if (def.default) {
             input.default = def.default;
         }
-        // Pola ustawione ręcznie w settings.json zostają
         if (def.description) {
             input.description = def.description;
         }
@@ -1031,5 +989,4 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('scroll', hideTooltip, true);
 
-// Request initial buttons
 vscode.postMessage({ type: 'getButtons' });

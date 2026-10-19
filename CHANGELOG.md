@@ -13,9 +13,29 @@ First release on the VS Code Marketplace.
 - Extension icon and Marketplace listing (description, keywords, banner).
 - CI on GitHub Actions: build, lint, tests and the packaged `.vsix` on every push and pull request.
 
+### Security
+
+- Values of `${file}`, `${selectedText}`, `${workspaceFolder}`, `${env:…}` and the other editor variables, and options picked from **List from command**, are quoted for the shell of the terminal the command runs in (bash, zsh, fish, PowerShell, cmd), also inside your own quotes and `$(...)`. A file or branch name such as `a$(curl …|sh).js` can no longer run a command. Where a value cannot be passed safely (cmd.exe with `"`, `%` or a line break, backticks, an unknown shell), the run stops with a message. Typed answers and your own list options are inserted as typed.
+- **Rerun Last Command** and **Restart** quote the values again for the terminal they run in, and ask first for buttons with **Ask before running**.
+- Git aliases: git is started by its full path, never from the terminal's folder (on Windows a `git.exe` inside a cloned repository could run instead). The terminal's folder is used only inside the workspace.
+- **List from command** runs in your home folder in an untrusted workspace.
+
 ### Changed
 
 - README written for the Marketplace page; development notes moved to `DEVELOPMENT.md`, release steps to `RELEASE_GUIDE.md`.
+
+### Fixed
+
+- Buttons written by hand in `settings.json` without an `id`, with a duplicate `id` or with wrong field types work instead of doing nothing or failing. Entries without a name or command, and broken questions, are kept in the file.
+- Dragging a button only saves the places whose order changed, so it no longer rewrites user settings and the project's `.vscode/settings.json` each time.
+- Closing one of the two views no longer stops updates in the other.
+- Pressing `Esc` while **List from command** is loading cancels the run and stops the command.
+- **Open config file** works for repository aliases (`.git/config`).
+
+### Performance
+
+- Git aliases are read by one refresh at a time, with requests in between merged into one, instead of several parallel runs of git when the views open.
+- Large **List from command** output (e.g. thousands of branches) no longer blocks the extension host.
 
 ## [0.4.0] - 2026-10-19
 

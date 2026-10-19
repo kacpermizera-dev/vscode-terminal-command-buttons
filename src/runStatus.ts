@@ -1,6 +1,3 @@
-// Status ostatniego uruchomienia komendy. Bez importu vscode, żeby dało się testować.
-
-// unknown: komenda wysłana, ale wyniku nie znamy (brak Shell Integration, np. cmd.exe)
 export type RunState = "running" | "success" | "error" | "unknown";
 
 export interface RunStatus {
@@ -10,8 +7,6 @@ export interface RunStatus {
   exitCode?: number;
 }
 
-// Linia z Shell Integration bywa poprzedzona spacją z obejścia Git Bash
-// albo zbłąkanym znakiem sterującym, więc porównujemy wersje oczyszczone
 export function normalizeCommandLine(value: string): string {
   return value
     .replace(/[\u0000-\u001f\u007f]/g, " ")
@@ -57,7 +52,6 @@ export function formatAgo(ms: number): string {
   return `${Math.floor(hours / 24)} d ago`;
 }
 
-// Jedna linia do dymka i Quick Picka, np. "Last run: failed (exit 1) · 0.4s · 2 min ago"
 export function formatStatus(status: RunStatus, now: number): string {
   if (status.state === "running") {
     return `Running… ${formatDuration(now - status.startedAt)}`;

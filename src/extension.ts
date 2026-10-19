@@ -10,7 +10,6 @@ import { TerminalButtonsProvider } from "./view";
 
 const WELCOME_SHOWN_KEY = "welcomeShown";
 
-// Jednorazowo: główny wyróżnik wtyczki (widok obok terminala) jest schowany za ikoną w nagłówku
 async function offerDockToTerminal(memory: vscode.Memento) {
   if (memory.get(WELCOME_SHOWN_KEY)) {
     return;
@@ -26,7 +25,6 @@ async function offerDockToTerminal(memory: vscode.Memento) {
   }
 }
 
-// Kontekst prawego kliknięcia na przycisku (data-vscode-context w webview)
 interface ButtonContext {
   buttonId: string;
   viewType: string;
@@ -38,7 +36,6 @@ export function activate(context: vscode.ExtensionContext) {
   const store = new ButtonStore(context.workspaceState);
   const runner = new Runner();
   const gitAliases = new GitAliases();
-  // Ostatnie wartości ${input:…} pamiętamy niezależnie od workspace
   const memory = context.globalState;
   context.subscriptions.push(
     store,
@@ -47,7 +44,6 @@ export function activate(context: vscode.ExtensionContext) {
     new PinnedButtons(store, runner)
   );
 
-  // Rejestracja providerów webview: Activity Bar i panel dolny
   const providers = new Map<string, TerminalButtonsProvider>();
   for (const viewType of [
     TerminalButtonsProvider.viewType,
@@ -71,19 +67,16 @@ export function activate(context: vscode.ExtensionContext) {
     providers.forEach((provider) => provider.sendButtonsToWebview());
 
   context.subscriptions.push(
-    // Odśwież oba widoki po każdej zmianie przycisków lub układu
     store.onDidChange(refreshViews),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration(`${CONFIG_SECTION}.layout`)) {
         refreshViews();
       }
     }),
-    // Nowe aliasy zmieniają dymki przycisków
     gitAliases.onDidChange(refreshViews),
     runner.onDidChange(() =>
       providers.forEach((provider) => provider.sendStatusesToWebview())
     ),
-    // Po zaufaniu workspace dochodzą aliasy z .git/config repo i stare przyciski z settings.json
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       gitAliases.refresh();
       refreshViews();
@@ -93,7 +86,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   store.offerLegacyMigration();
 
-  // Komenda do otwierania panelu przycisków
   const openButtonsPanel = vscode.commands.registerCommand(
     "terminalCommandButtons.openButtonsPanel",
     () => {
@@ -103,7 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Komenda do dodania nowego przycisku
   const addButton = vscode.commands.registerCommand(
     "terminalCommandButtons.addButton",
     async () => {
@@ -129,14 +120,11 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Zwinięcie / rozwinięcie wszystkich sekcji. view/title nie podaje, z którego widoku
-  // kliknięto, więc wysyłamy do obu - schowany widok nic nie zrobi.
   const toggleCollapseAll = vscode.commands.registerCommand(
     "terminalCommandButtons.toggleCollapseAll",
     () => providers.forEach((provider) => provider.toggleCollapseAll())
   );
 
-  // Przełączenie układu ikony / lista
   const toggleLayout = vscode.commands.registerCommand(
     "terminalCommandButtons.toggleLayout",
     async () => {
@@ -147,19 +135,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Komendy z paska terminala: "Uruchom…" i "Powtórz"
   const runPicker = vscode.commands.registerCommand(
     "terminalCommandButtons.runPicker",
     () => showRunPicker(runner, store, memory)
   );
 
-  // Podgląd i edycja aliasów gita
   const manageGitAliases = vscode.commands.registerCommand(
     "terminalCommandButtons.manageGitAliases",
     () => showGitAliases(gitAliases)
   );
 
-  // Przeniesienie starych przycisków z .vscode/settings.json, też z palety
   const moveWorkspaceButtons = vscode.commands.registerCommand(
     "terminalCommandButtons.moveWorkspaceButtons",
     () => store.migrateLegacy()
@@ -170,7 +155,6 @@ export function activate(context: vscode.ExtensionContext) {
     () => runner.rerunLast()
   );
 
-  // Komendy z menu prawego kliknięcia na przycisku
   const runButtonCommand = vscode.commands.registerCommand(
     "terminalCommandButtons.runButton",
     (ctx: ButtonContext) => {
@@ -215,8 +199,6 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Komenda do przeniesienia widoku z panelu obok terminala.
-  // vscode.moveViews to komenda wewnętrzna VS Code - przy błędzie instrukcja ręczna.
   const dockToTerminal = vscode.commands.registerCommand(
     "terminalCommandButtons.dockToTerminal",
     async () => {
@@ -254,7 +236,6 @@ export function activate(context: vscode.ExtensionContext) {
     dockToTerminal
   );
 
-  // Po rejestracji komend, bo odpowiedź woła dockToTerminal
   offerDockToTerminal(memory);
 }
 

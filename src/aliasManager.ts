@@ -35,7 +35,6 @@ const SCOPE_LABELS: Record<string, string> = {
   command: "Command line",
 };
 
-// Kolejność grup: najpierw to, co nadpisuje resztę
 const SCOPE_ORDER = ["local", "worktree", "global", "system", "command"];
 
 function scopeRank(scope: string): number {
@@ -74,7 +73,6 @@ function buildItems(aliases: GitAlias[]): AliasItem[] {
   return items;
 }
 
-// Inny alias o tej nazwie (git nie rozróżnia wielkości liter w nazwach)
 function findOther(
   gitAliases: GitAliases,
   name: string,
@@ -104,7 +102,6 @@ async function askName(
         return "Use letters, digits and dashes, starting with a letter.";
       }
       const existing = findOther(gitAliases, name, current);
-      // Ostrzeżenie, nie błąd - nadpisanie potwierdzamy przy zapisie
       return existing
         ? {
             message: `Alias "${existing.name}" already exists: ${existing.expansion}`,
@@ -168,7 +165,6 @@ async function addAlias(gitAliases: GitAliases) {
   await gitAliases.set(scope, name, expansion);
 }
 
-// Edycja nazwy i wartości; zmiana nazwy = zapis pod nową i usunięcie starej
 async function editAlias(gitAliases: GitAliases, alias: GitAlias) {
   if (!isEditableScope(alias.scope)) {
     return;
@@ -181,7 +177,6 @@ async function editAlias(gitAliases: GitAliases, alias: GitAlias) {
   if (!expansion) {
     return;
   }
-  // Sama zmiana wielkości liter to ten sam klucz - bez usuwania starego
   const renamed = name.toLowerCase() !== alias.name.toLowerCase();
   if (renamed && !(await confirmReplace(gitAliases, name, alias))) {
     return;
@@ -210,12 +205,18 @@ async function deleteAlias(gitAliases: GitAliases, alias: GitAlias) {
 }
 
 async function openConfigFile(alias: GitAlias) {
-  if (alias.file) {
+  if (!alias.file) {
+    return;
+  }
+  try {
     await vscode.window.showTextDocument(vscode.Uri.file(alias.file));
+  } catch (error) {
+    vscode.window.showErrorMessage(
+      `Cannot open ${alias.file}: ${error instanceof Error ? error.message : error}`
+    );
   }
 }
 
-// Wykonuje akcję i wraca do listy, żeby było widać efekt
 async function runAndReturn(gitAliases: GitAliases, action: () => Promise<void>) {
   try {
     await action();
@@ -227,7 +228,6 @@ async function runAndReturn(gitAliases: GitAliases, action: () => Promise<void>)
   showGitAliases(gitAliases);
 }
 
-// Lista aliasów gita: podgląd, dodawanie, edycja i usuwanie
 export function showGitAliases(gitAliases: GitAliases) {
   const picker = vscode.window.createQuickPick<AliasItem>();
   picker.title = "Git Aliases";

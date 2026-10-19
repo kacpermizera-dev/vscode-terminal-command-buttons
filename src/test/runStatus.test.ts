@@ -8,7 +8,6 @@ import {
 
 suite("Run status", () => {
   test("matches the command line from shell integration", () => {
-    // Spacja z obejścia Git Bash i zbłąkany ESC przed komendą
     assert.ok(isSameCommand(" git status", "git status"));
     assert.ok(isSameCommand("\u001b git  status ", "git status"));
     assert.ok(!isSameCommand("git status -sb", "git status"));

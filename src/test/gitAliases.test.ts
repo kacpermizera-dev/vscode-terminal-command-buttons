@@ -5,7 +5,6 @@ import {
   parseGitAliases,
 } from "../gitAliases";
 
-// Jeden wpis wyjścia `git config -z --show-scope --show-origin --get-regexp`
 function entry(scope: string, origin: string, key: string, value: string) {
   return `${scope}\0${origin}\0${key}\n${value}\0`;
 }

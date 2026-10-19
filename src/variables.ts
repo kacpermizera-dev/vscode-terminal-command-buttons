@@ -1,31 +1,24 @@
-// Zmienne w komendach przycisków. Bez importu vscode, żeby dało się testować.
-
-// Definicja pytania dla ${input:id}, jak "inputs" w tasks.json
 export interface ButtonInput {
   id: string;
   type?: "promptString" | "pickString";
   description?: string;
   default?: string;
   options?: string[];
-  // Komenda shella, której wynik (linia = opcja) daje listę dla pickString
   optionsFrom?: string;
-  // Wartość ukryta przy wpisywaniu i niezapamiętywana
   password?: boolean;
 }
 
-// Opcje z wyniku komendy: niepuste linie, bez powtórzeń, bez znacznika "* " (np. git branch)
 export function parseOptionLines(output: string): string[] {
-  const options: string[] = [];
+  const options = new Set<string>();
   for (const line of output.split(/\r?\n/)) {
     const option = line.replace(/^\*\s+/, "").trim();
-    if (option && !options.includes(option)) {
-      options.push(option);
+    if (option) {
+      options.add(option);
     }
   }
-  return options;
+  return [...options];
 }
 
-// Tylko znane nazwy - ${HOME} czy ${PATH} w bashu zostają nietknięte
 const BUILTIN_NAMES = [
   "workspaceFolder",
   "workspaceFolderBasename",
@@ -46,7 +39,6 @@ const VARIABLE_PATTERN = new RegExp(
 
 const INPUT_ID_PATTERN = /^[\w-]+$/;
 
-// Nazwy zmiennych w kolejności pierwszego wystąpienia, bez powtórzeń
 export function listVariables(command: string): string[] {
   const names: string[] = [];
   for (const match of command.matchAll(VARIABLE_PATTERN)) {
@@ -57,10 +49,15 @@ export function listVariables(command: string): string[] {
   return names;
 }
 
-// Podstawienie wartości; zmienne bez wartości zostają w tekście
-export function substitute(command: string, values: Record<string, string>): string {
-  return command.replace(VARIABLE_PATTERN, (whole, name: string) =>
-    Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole
+export function substitute(
+  command: string,
+  values: Record<string, string>,
+  quote: (name: string, value: string, offset: number) => string = (_name, value) => value
+): string {
+  return command.replace(VARIABLE_PATTERN, (whole, name: string, offset: number) =>
+    Object.prototype.hasOwnProperty.call(values, name)
+      ? quote(name, values[name], offset)
+      : whole
   );
 }
 
@@ -68,7 +65,6 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-// Walidacja "inputs" z ustawień lub formularza; undefined = niepoprawna struktura
 export function sanitizeInputs(value: unknown): ButtonInput[] | undefined {
   if (value === undefined || value === null) {
     return [];

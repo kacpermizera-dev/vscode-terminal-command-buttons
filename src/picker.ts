@@ -23,7 +23,6 @@ function toItem(button: ScopedButton, runner: Runner, now: number): RunItem {
   };
 }
 
-// Quick Pick "Uruchom…": przyciski tego workspace i globalne, z ostatnim statusem
 export async function showRunPicker(
   runner: Runner,
   store: ButtonStore,
@@ -38,7 +37,6 @@ export async function showRunPicker(
     return;
   }
 
-  // Te same sekcje co w widoku, spłaszczone do separatorów "Zakres · Grupa"
   const arranged = arrangeButtons(buttons);
   const bothScopes = new Set(arranged.map((a) => a.button.scope)).size > 1;
   const items: RunItem[] = [];

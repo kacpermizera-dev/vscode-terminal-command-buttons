@@ -1,23 +1,20 @@
 import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./buttons";
 import { RunStatus, isSameCommand } from "./runStatus";
+import { ShellKind, shellKindOf } from "./shellQuote";
 
-// Ile czekamy, aż Shell Integration zgłosi start wysłanej komendy
 const START_TIMEOUT_MS = 10000;
-// Ile restart czeka na zakończenie komendy po Ctrl+C
 const STOP_TIMEOUT_MS = 3000;
 
+export type PreparedCommand = string | ((shell: ShellKind) => string | undefined);
+
 export interface RunOptions {
-  // Klucz statusu: id przycisku; domyślnie tekst komendy
   key?: string;
-  // Nazwany terminal tylko dla tego przycisku; brak = aktywny terminal
   terminal?: string;
-  // Nazwa przycisku z "Ask before running" - "Powtórz" też pyta
   confirm?: string;
 }
 
-// Modalne "Run …?" z komendą po podstawieniu zmiennych
-export async function confirmRun(name: string, command: string): Promise<boolean> {
+async function confirmRun(name: string, command: string): Promise<boolean> {
   const answer = await vscode.window.showWarningMessage(
     `Run "${name}"?`,
     { modal: true, detail: command },
@@ -27,11 +24,10 @@ export async function confirmRun(name: string, command: string): Promise<boolean
 }
 
 interface LastRun {
-  command: string;
+  command: PreparedCommand;
   options: RunOptions;
 }
 
-// Komenda wysłana do terminala, na którą czekamy w onDidStartTerminalShellExecution
 interface PendingRun {
   terminal: vscode.Terminal;
   key: string;
@@ -46,7 +42,6 @@ interface TrackedExecution {
   status: RunStatus;
 }
 
-// Czeka na Shell Integration nowego terminala, po timeoucie zwraca undefined
 function waitForShellIntegration(
   terminal: vscode.Terminal,
   timeoutMs: number
@@ -71,7 +66,6 @@ function waitForShellIntegration(
   });
 }
 
-// Uruchamia komendy w terminalu i śledzi ich status
 export class Runner implements vscode.Disposable {
   private readonly _statuses = new Map<string, RunStatus>();
   private readonly _executions = new Map<
@@ -79,10 +73,8 @@ export class Runner implements vscode.Disposable {
     TrackedExecution
   >();
   private _pending: PendingRun[] = [];
-  // Ostatnie uruchomienie w ogóle i per klucz (do "Powtórz" i restartu)
   private _last?: LastRun;
   private readonly _lastByKey = new Map<string, LastRun>();
-  // Terminal, w którym działa komenda danego klucza (do Stop)
   private readonly _terminalByKey = new Map<string, vscode.Terminal>();
 
   private readonly _onDidChange = new vscode.EventEmitter<void>();
@@ -110,32 +102,40 @@ export class Runner implements vscode.Disposable {
     return this._statuses.get(key)?.state === "running";
   }
 
-  // Wykonanie komendy w terminalu przycisku albo w aktywnym
-  public async run(command: string, options: RunOptions = {}) {
+  public run(prepared: PreparedCommand, options: RunOptions = {}): Promise<void> {
+    return this._run(prepared, options, false);
+  }
+
+  private async _run(prepared: PreparedCommand, options: RunOptions, confirmed: boolean) {
+    const existing = this._findTerminal(options.terminal);
+    const command =
+      typeof prepared === "string" ? prepared : prepared(this._shellKindOf(existing));
+    if (command === undefined) {
+      return;
+    }
+    if (options.confirm && !confirmed && !(await confirmRun(options.confirm, command))) {
+      return;
+    }
+
     const key = options.key ?? command;
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
 
-    // Obejście błędu VS Code + Git Bash na Windows (microsoft/vscode#275625):
-    // przed tekstem trafia do shella zbłąkany ESC i readline łączy go z pierwszym
-    // znakiem w skrót Meta (ESC g -> "it status"). ESC + spacja jest nieszkodliwe.
     const text =
       process.platform === "win32" &&
       config.get<boolean>("windowsLeadingSpace", true)
         ? ` ${command}`
         : command;
 
-    const terminal = await this._getTerminal(options.terminal);
+    const terminal =
+      existing && existing.exitStatus === undefined
+        ? existing
+        : await this._getTerminal(options.terminal);
 
-    // preserveFocus: fokus zostaje w widoku przycisków
     terminal.show(true);
 
-    // Zwykły sendText zamiast shellIntegration.executeCommand: executeCommand
-    // opakowuje tekst w bracketed paste (ESC[200~), a zbłąkany ESC przed nim daje
-    // w bashu ESC ESC = dopełnianie i komenda zostaje niewykonana.
-    // Status i kod wyjścia bierzemy więc ze zdarzeń Shell Integration.
     terminal.sendText(text, true);
 
-    this._last = { command, options };
+    this._last = { command: prepared, options };
     this._lastByKey.set(key, this._last);
     vscode.commands.executeCommand(
       "setContext",
@@ -151,7 +151,6 @@ export class Runner implements vscode.Disposable {
         command,
         status,
         timer: setTimeout(() => {
-          // Start nie przyszedł (np. terminal zajęty inną komendą) - wyniku nie poznamy
           this._pending = this._pending.filter((p) => p !== pending);
           this._finish(key, status, "unknown");
         }, START_TIMEOUT_MS),
@@ -169,19 +168,13 @@ export class Runner implements vscode.Disposable {
     }
   }
 
-  // "Powtórz" uruchamia dokładnie tę samą komendę, z już podstawionymi zmiennymi
   public async rerunLast() {
     const last = this._last;
-    if (!last) {
-      return;
+    if (last) {
+      await this.run(last.command, last.options);
     }
-    if (last.options.confirm && !(await confirmRun(last.options.confirm, last.command))) {
-      return;
-    }
-    await this.run(last.command, last.options);
   }
 
-  // Ctrl+C w terminalu, w którym działa komenda
   public stop(key: string) {
     const terminal = this._terminalByKey.get(key);
     if (terminal && this.isRunning(key)) {
@@ -189,17 +182,25 @@ export class Runner implements vscode.Disposable {
     }
   }
 
-  // Stop, poczekaj na koniec komendy (albo timeout), uruchom ponownie
   public async restart(key: string) {
     const last = this._lastByKey.get(key);
     if (!last) {
       return;
     }
+    if (last.options.confirm) {
+      const command =
+        typeof last.command === "string"
+          ? last.command
+          : last.command(this._shellKindOf(this._findTerminal(last.options.terminal)));
+      if (command === undefined || !(await confirmRun(last.options.confirm, command))) {
+        return;
+      }
+    }
     if (this.isRunning(key)) {
       this.stop(key);
       await this._waitUntilStopped(key);
     }
-    await this.run(last.command, last.options);
+    await this._run(last.command, last.options, true);
   }
 
   public dispose() {
@@ -207,14 +208,27 @@ export class Runner implements vscode.Disposable {
     this._disposables.forEach((d) => d.dispose());
   }
 
-  private async _getTerminal(name: string | undefined): Promise<vscode.Terminal> {
+  private _shellKindOf(terminal: vscode.Terminal | undefined): ShellKind {
+    const options = terminal?.creationOptions;
+    const shellPath = options && "shellPath" in options ? options.shellPath : undefined;
+    return shellKindOf(terminal?.state.shell, shellPath ?? vscode.env.shell);
+  }
+
+  private _findTerminal(name: string | undefined): vscode.Terminal | undefined {
     if (name) {
-      const existing = vscode.window.terminals.find(
+      return vscode.window.terminals.find(
         (t) => t.name === name && t.exitStatus === undefined
       );
-      if (existing) {
-        return existing;
-      }
+    }
+    return vscode.window.activeTerminal;
+  }
+
+  private async _getTerminal(name: string | undefined): Promise<vscode.Terminal> {
+    const existing = this._findTerminal(name);
+    if (existing) {
+      return existing;
+    }
+    if (name) {
       const created = vscode.window.createTerminal({
         name,
         cwd: vscode.workspace.workspaceFolders?.[0]?.uri,
@@ -223,11 +237,6 @@ export class Runner implements vscode.Disposable {
       return created;
     }
 
-    const active = vscode.window.activeTerminal;
-    if (active) {
-      return active;
-    }
-    // Stwórz nowy terminal jeśli żaden nie jest aktywny i poczekaj, aż shell będzie gotowy
     const created = vscode.window.createTerminal("Command Terminal");
     await waitForShellIntegration(created, 3000);
     return created;
@@ -251,7 +260,6 @@ export class Runner implements vscode.Disposable {
 
   private _onStart(e: vscode.TerminalShellExecutionStartEvent) {
     const { value, confidence } = e.execution.commandLine;
-    // Przy niskiej pewności tekst linii bywa niepełny - wtedy wystarczy ten sam terminal
     const pending = this._pending.find(
       (p) =>
         p.terminal === e.terminal &&
@@ -312,7 +320,6 @@ export class Runner implements vscode.Disposable {
     });
   }
 
-  // Aktualizuje status tylko, jeśli w międzyczasie nie wystartowało nowsze uruchomienie
   private _finish(
     key: string,
     status: RunStatus,

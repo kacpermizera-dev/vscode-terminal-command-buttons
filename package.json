@@ -174,6 +174,10 @@
           "description": "Command buttons shown in every workspace. Buttons marked \"Only in this workspace\" are stored inside VS Code, not here and not in the project's files.",
           "items": {
             "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -254,7 +258,7 @@
                     },
                     "optionsFrom": {
                       "type": "string",
-                      "description": "Shell command for pickString; each line of its output is an option, e.g. git branch --format=%(refname:short)"
+                      "description": "Shell command for pickString; each line of its output is an option, e.g. git branch --format=%(refname:short). The picked option is quoted for the terminal's shell."
                     },
                     "password": {
                       "type": "boolean",

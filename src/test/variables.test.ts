@@ -25,7 +25,6 @@ suite("Variables", () => {
       substitute("${input:a}-${input:a}-${input:b}", { "input:a": "x" }),
       "x-x-${input:b}"
     );
-    // Wartość z "$&" nie może być interpretowana jak wzorzec zamiany
     assert.strictEqual(substitute("${input:a}", { "input:a": "$&$1" }), "$&$1");
   });
 
@@ -51,7 +50,6 @@ suite("Variables", () => {
   });
 
   test("turns command output into options", () => {
-    // Wyjście "git branch": gwiazdka przy bieżącej gałęzi, CRLF z Windows, pusta linia na końcu
     assert.deepStrictEqual(
       parseOptionLines("  develop\r\n* main\r\n  feature/x\r\n\r\n  main\r\n"),
       ["develop", "main", "feature/x"]

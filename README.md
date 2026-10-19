@@ -1,4 +1,4 @@
-# 🖥️ Terminal Command Buttons
+# Terminal Command Buttons
 
 One-click buttons for the terminal commands you run every day, in a panel right next to the terminal. See at a glance whether the last run succeeded, ask for values when you click, keep dev servers in their own terminal and stop or restart them, and manage your git aliases without editing `.gitconfig`.
 
@@ -6,25 +6,25 @@ One-click buttons for the terminal commands you run every day, in a panel right 
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/kacpermizera-dev.terminal-command-buttons)](https://marketplace.visualstudio.com/items?itemName=kacpermizera-dev.terminal-command-buttons)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/blob/master/LICENSE)
 
-## ✨ Features
+## Features
 
-- **🎯 Quick Commands**: Add custom command buttons for instant execution
-- **🪟 Next to the Terminal**: Keep the buttons in a split view right beside your terminal
-- **🧩 Icons or List**: Compact icon buttons with hover details, or a list with name and command
-- **⚙️ Easy Configuration**: Add, edit, delete and reorder buttons directly from the UI
-- **🚦 Run Status**: A dot on each button shows whether its last run is running, succeeded or failed
-- **▶️ Terminal Toolbar**: **Run Command Button…** and **Rerun Last Command** right in the terminal's title bar
-- **🌿 Git Aliases**: See your git aliases and what they expand to, add, edit or delete them without touching `.gitconfig`
-- **🔤 Variables**: `${input:name}` asks for a value when you click; `${file}`, `${workspaceFolder}`, `${selectedText}` and more come from the editor
-- **🗂️ Global or Per Workspace**: Keep a button everywhere, or only in the current workspace
-- **⏹️ Own Terminal, Stop / Restart**: Give a long-running command (dev server, watcher) its own terminal and stop or restart it from the button
-- **📁 Groups**: Sort buttons into collapsible groups such as Git or Build
-- **📌 Status Bar**: Pin your most used buttons to the status bar
-- **✋ Ask Before Running**: A confirmation for commands like `git push --force`
-- **🎨 Color Coding**: Pick a color from the palette or a custom one
-- **🔒 Nothing in Your Repository**: Buttons live in VS Code (user settings and workspace storage), never in the project's files
+- **Quick Commands**: Add custom command buttons for instant execution
+- **Next to the Terminal**: Keep the buttons in a split view right beside your terminal
+- **Icons or List**: Compact icon buttons with hover details, or a list with name and command
+- **Easy Configuration**: Add, edit, delete and reorder buttons directly from the UI
+- **Run Status**: A dot on each button shows whether its last run is running, succeeded or failed
+- **Terminal Toolbar**: **Run Command Button…** and **Rerun Last Command** right in the terminal's title bar
+- **Git Aliases**: See your git aliases and what they expand to, add, edit or delete them without touching `.gitconfig`
+- **Variables**: `${input:name}` asks for a value when you click; `${file}`, `${workspaceFolder}`, `${selectedText}` and more come from the editor
+- **Global or Per Workspace**: Keep a button everywhere, or only in the current workspace
+- **Own Terminal, Stop / Restart**: Give a long-running command (dev server, watcher) its own terminal and stop or restart it from the button
+- **Groups**: Sort buttons into collapsible groups such as Git or Build
+- **Status Bar**: Pin your most used buttons to the status bar
+- **Ask Before Running**: A confirmation for commands like `git push --force`
+- **Color Coding**: Pick a color from the palette or a custom one
+- **Nothing in Your Repository**: Buttons live in VS Code (user settings and workspace storage), never in the project's files
 
-## 📦 Installation
+## Installation
 
 1. Open the **Extensions** view in VS Code (`Ctrl+Shift+X`)
 2. Search for **Terminal Command Buttons**
@@ -32,7 +32,7 @@ One-click buttons for the terminal commands you run every day, in a panel right 
 
 Or download a `.vsix` from [GitHub Releases](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/releases) and use `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Getting Started
 
@@ -56,7 +56,7 @@ Or download a `.vsix` from [GitHub Releases](https://github.com/kacpermizera-dev
 3. Click **"Add"**
 4. Click your new button to execute the command!
 
-## 🎯 Usage
+## Usage
 
 ### Custom Commands
 
@@ -109,7 +109,11 @@ Commands can contain variables that are filled in when you click the button. You
 | `${selectedText}`, `${lineNumber}` | The selection and cursor line in the editor |
 | `${env:NAME}` | An environment variable |
 
-Other `${...}` text, such as `${HOME}` in bash, is left alone for the shell. Values are inserted as they are, so add quotes where the shell needs them, e.g. `git commit -m "${input:message}"` or `npx jest "${relativeFile}"`. Pressing `Esc` at a question cancels the run. **Rerun Last Command** repeats the command with the same values.
+Other `${...}` text, such as `${HOME}` in bash, is left alone for the shell.
+
+Values from the editor, files, environment variables and **List from command** are quoted for the terminal's shell (bash, zsh, fish, PowerShell or cmd), so a file name with spaces, `;` or `$(...)` stays one argument and never runs as a command. This works inside your own quotes too, e.g. `npx jest "${relativeFile}"`. Where a value cannot be passed safely (cmd.exe and a value with `"`, `%` or a line break, a variable inside backticks, or a shell the extension does not know), the run stops with a message instead.
+
+What you type at a question, or pick from a **List** you entered yourself, is inserted as typed, so it can hold several arguments. Add quotes where the shell needs them, e.g. `git commit -m "${input:message}"`. Pressing `Esc` at a question cancels the run. **Rerun Last Command** repeats the command with the same values.
 
 **Insert… → Ask when clicked** adds `${input:value}` with the name selected, so you can type a better one (e.g. `branch`). For every question in the command, the form shows a row under **Questions**:
 
@@ -136,7 +140,7 @@ The status comes from VS Code's [terminal shell integration](https://code.visual
 
 Two icons appear in the terminal panel's title bar:
 
-- **▶ Run Command Button…** opens a picker with all your buttons and their last status
+- **Run Command Button…** opens a picker with all your buttons and their last status
 - **↻ Rerun Last Command** runs the last command sent by the extension again
 
 Both are also in the Command Palette; **Run Command Button…** is also in the terminal's right-click menu.
@@ -152,7 +156,7 @@ Both are also in the Command Palette; **Run Command Button…** is also in the t
 
 If a button's command calls an alias (e.g. `git lg -5`), its tooltip shows the alias expansion. In untrusted workspaces only your global aliases are read and edited, not the ones from the repository's `.git/config`.
 
-## ⚙️ Configuration
+## Configuration
 
 Global buttons can also be edited in your user `settings.json`:
 
@@ -187,7 +191,7 @@ Global buttons can also be edited in your user `settings.json`:
 | `terminalCommandButtons.layout` | `icons` | `icons` for compact icon buttons, `list` for one row per button. |
 | `terminalCommandButtons.windowsLeadingSpace` | `true` | On Windows, prefix commands with a space. Works around Git Bash dropping the first character ([microsoft/vscode#275625](https://github.com/microsoft/vscode/issues/275625)). |
 
-## 🔧 Commands
+## Commands
 
 Access these commands via the Command Palette:
 
@@ -201,23 +205,16 @@ Access these commands via the Command Palette:
 - **Terminal Command Buttons: Collapse / Expand All** - Collapse or expand all sections of the view
 - **Terminal Command Buttons: Move Buttons from .vscode/settings.json into VS Code** - Move buttons saved by older versions out of the project
 
-## 📋 Requirements
+## Requirements
 
 - VS Code 1.101.0 or higher
 - Terminal access in your workspace
 
-## 📝 Changelog
+## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
 
-## 🤝 Feedback and Contributing
-
-Found a bug or have an idea? Open an [issue on GitHub](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/issues). To work on the extension, see [DEVELOPMENT.md](DEVELOPMENT.md).
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-**Made with ❤️ for VS Code developers**

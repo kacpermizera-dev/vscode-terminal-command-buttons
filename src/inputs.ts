@@ -1,8 +1,10 @@
 import { exec } from "child_process";
+import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CommandButton } from "./buttons";
-import { Runner, confirmRun } from "./runner";
+import { PreparedCommand, Runner } from "./runner";
+import { ShellKind, quoteForShell } from "./shellQuote";
 import {
   ButtonInput,
   listVariables,
@@ -10,10 +12,8 @@ import {
   substitute,
 } from "./variables";
 
-// Limit czasu dla komendy, która podaje opcje listy
 const OPTIONS_TIMEOUT_MS = 5000;
 
-// Ostatnie wartości pytań: "<id przycisku>:<id inputu>" -> wartość
 const LAST_VALUES_KEY = "inputValues";
 
 function activeFileUri(): vscode.Uri | undefined {
@@ -29,7 +29,6 @@ function activeFolder(): vscode.WorkspaceFolder | undefined {
   );
 }
 
-// undefined = zmienna nie ma teraz wartości (np. ${file} bez otwartego pliku)
 function resolveBuiltin(name: string): string | undefined {
   if (name.startsWith("env:")) {
     return process.env[name.slice("env:".length)] ?? "";
@@ -67,15 +66,17 @@ function needs(name: string): string {
     : "an open file";
 }
 
-// Opcje listy z wyniku komendy shella, uruchomionej w folderze workspace
-function optionsFromCommand(command: string): Promise<string[]> {
+function optionsFromCommand(command: string, signal: AbortSignal): Promise<string[]> {
+  const trusted = vscode.workspace.isTrusted;
   return new Promise((resolve, reject) => {
     exec(
       command,
       {
-        cwd: activeFolder()?.uri.fsPath,
+        cwd: trusted ? activeFolder()?.uri.fsPath : os.homedir(),
+        env: trusted ? process.env : { ...process.env, NoDefaultCurrentDirectoryInExePath: "1" },
         timeout: OPTIONS_TIMEOUT_MS,
         windowsHide: true,
+        signal,
       },
       (error, stdout, stderr) => {
         if (error) {
@@ -88,11 +89,11 @@ function optionsFromCommand(command: string): Promise<string[]> {
   });
 }
 
-async function pickOption(
+function pickOption(
   title: string,
   input: ButtonInput,
   last: string | undefined,
-  loadOptions: Promise<string[]> | string[]
+  loadOptions: (signal: AbortSignal) => Promise<string[]> | string[]
 ): Promise<string | undefined> {
   const preferred = last ?? input.default;
   const picker = vscode.window.createQuickPick();
@@ -100,44 +101,58 @@ async function pickOption(
   picker.placeholder = `Pick ${input.id}`;
   picker.ignoreFocusOut = true;
   picker.busy = true;
-  picker.show();
 
-  let options: string[];
-  try {
-    options = await loadOptions;
-  } catch (error) {
-    picker.dispose();
-    vscode.window.showErrorMessage(
-      `${title}: the command for the options failed: ${error instanceof Error ? error.message : error}`
-    );
-    return undefined;
-  }
-  if (options.length === 0) {
-    picker.dispose();
-    vscode.window.showWarningMessage(`${title}: no options to pick from.`);
-    return undefined;
-  }
-
-  // Ostatnio wybrana (albo domyślna) opcja na górze listy
-  const ordered = preferred && options.includes(preferred)
-    ? [preferred, ...options.filter((o) => o !== preferred)]
-    : options;
-  picker.items = ordered.map((option) => ({
-    label: option,
-    description:
-      option === last ? "last used" : option === input.default ? "default" : undefined,
-  }));
-  picker.busy = false;
+  const abort = new AbortController();
+  let hidden = false;
 
   return new Promise((resolve) => {
     picker.onDidAccept(() => {
-      resolve(picker.selectedItems[0]?.label);
-      picker.hide();
+      const picked = picker.selectedItems[0]?.label;
+      if (picked !== undefined) {
+        resolve(picked);
+        picker.hide();
+      }
     });
     picker.onDidHide(() => {
+      hidden = true;
+      abort.abort();
       resolve(undefined);
       picker.dispose();
     });
+    picker.show();
+
+    Promise.resolve()
+      .then(() => loadOptions(abort.signal))
+      .then(
+        (options) => {
+          if (hidden) {
+            return;
+          }
+          if (options.length === 0) {
+            vscode.window.showWarningMessage(`${title}: no options to pick from.`);
+            picker.hide();
+            return;
+          }
+          const ordered = preferred && options.includes(preferred)
+            ? [preferred, ...options.filter((o) => o !== preferred)]
+            : options;
+          picker.items = ordered.map((option) => ({
+            label: option,
+            description:
+              option === last ? "last used" : option === input.default ? "default" : undefined,
+          }));
+          picker.busy = false;
+        },
+        (error) => {
+          if (hidden) {
+            return;
+          }
+          vscode.window.showErrorMessage(
+            `${title}: the command for the options failed: ${error instanceof Error ? error.message : error}`
+          );
+          picker.hide();
+        }
+      );
   });
 }
 
@@ -149,11 +164,13 @@ async function askInput(
   const title = `${button.name}: ${input.description ?? input.id}`;
   const preferred = last ?? input.default;
 
-  if (input.type === "pickString" && input.optionsFrom) {
-    return pickOption(title, input, last, optionsFromCommand(input.optionsFrom));
+  const optionsFrom = input.optionsFrom;
+  if (input.type === "pickString" && optionsFrom) {
+    return pickOption(title, input, last, (signal) => optionsFromCommand(optionsFrom, signal));
   }
-  if (input.type === "pickString" && input.options && input.options.length > 0) {
-    return pickOption(title, input, last, input.options);
+  const options = input.options;
+  if (input.type === "pickString" && options && options.length > 0) {
+    return pickOption(title, input, last, () => options);
   }
 
   return vscode.window.showInputBox({
@@ -165,11 +182,19 @@ async function askInput(
   });
 }
 
-// Komenda z podstawionymi zmiennymi; undefined = użytkownik anulował albo brak wartości
+function isTypedInput(button: CommandButton, name: string): boolean {
+  if (!name.startsWith("input:")) {
+    return false;
+  }
+  const id = name.slice("input:".length);
+  const input = button.inputs?.find((i) => i.id === id);
+  return !(input?.type === "pickString" && input.optionsFrom);
+}
+
 export async function resolveCommand(
   button: CommandButton,
   memory: vscode.Memento
-): Promise<string | undefined> {
+): Promise<PreparedCommand | undefined> {
   const names = listVariables(button.command);
   if (names.length === 0) {
     return button.command;
@@ -204,10 +229,30 @@ export async function resolveCommand(
   }
 
   await memory.update(LAST_VALUES_KEY, lastValues);
-  return substitute(button.command, values);
+
+  return (shell: ShellKind) => {
+    let unsafe: string | undefined;
+    const command = substitute(button.command, values, (name, value, offset) => {
+      if (isTypedInput(button, name)) {
+        return value;
+      }
+      const quoted = quoteForShell(button.command, offset, value, shell);
+      if (quoted === undefined) {
+        unsafe ??= name;
+        return value;
+      }
+      return quoted;
+    });
+    if (unsafe) {
+      vscode.window.showErrorMessage(
+        `${button.name}: the value of \${${unsafe}} cannot be passed safely to this terminal's shell here (in cmd.exe: ", % or a line break; elsewhere: inside backticks, $'…' or \${…}, or an unknown shell). Run it in bash, PowerShell or Git Bash, or move the variable out of that construct.`
+      );
+      return undefined;
+    }
+    return command;
+  };
 }
 
-// Uruchomienie przycisku: pytania o zmienne, potwierdzenie, potem terminal przycisku albo aktywny
 export async function runButton(
   runner: Runner,
   button: CommandButton,
@@ -215,9 +260,6 @@ export async function runButton(
 ) {
   const command = await resolveCommand(button, memory);
   if (command === undefined) {
-    return;
-  }
-  if (button.confirm && !(await confirmRun(button.name, command))) {
     return;
   }
   await runner.run(command, {

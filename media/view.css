@@ -1,4 +1,3 @@
-/* Natywne kontrolki (np. lista podpowiedzi ikon) w kolorach motywu */
 body.vscode-light,
 body.vscode-high-contrast-light {
     color-scheme: light;
@@ -29,7 +28,6 @@ body {
     gap: 2px;
 }
 
-/* Tryb ikon: kwadratowy przycisk, kolor przycisku na ikonie i pasku pod nią */
 .cmd {
     --btn-color: var(--vscode-foreground);
     position: relative;
@@ -98,7 +96,6 @@ body {
     display: none;
 }
 
-/* Tryb listy: wiersz z ikoną, nazwą i komendą */
 .list .cmd {
     width: 100%;
     height: auto;
@@ -131,7 +128,6 @@ body {
     color: var(--btn-color);
 }
 
-/* Nazwa i komenda na wspólnej linii bazowej, cały blok wyśrodkowany w wierszu */
 .list .cmd .text {
     display: flex;
     align-items: baseline;
@@ -165,7 +161,6 @@ body {
     font-weight: normal;
 }
 
-/* Uchwyt do przeciągania przy lewym pasku, tylko w liście */
 .cmd .grip {
     display: none;
 }
@@ -186,7 +181,6 @@ body {
     visibility: visible;
 }
 
-/* Belka o starych przyciskach w .vscode/settings.json, chowana przy edycji */
 .notice {
     display: flex;
     flex-wrap: wrap;
@@ -228,14 +222,12 @@ body.editing .notice {
     cursor: pointer;
 }
 
-/* Dwa poziomy: zakres ("This workspace" / "All workspaces") i grupy w nim */
 .scope-label,
 .group-label {
     flex: none;
     user-select: none;
 }
 
-/* Zakres: mały zwijany nagłówek na całą szerokość, w obu układach */
 .scope-label {
     display: flex;
     flex-basis: 100%;
@@ -274,7 +266,6 @@ body.editing .notice {
     font-size: 14px;
 }
 
-/* Grupa w liście: przycisk zwijający, wcięty pod zakresem */
 .list .group-label {
     display: flex;
     align-items: center;
@@ -328,7 +319,6 @@ body.editing .notice {
     opacity: 0.6;
 }
 
-/* Grupa na początku rzędu nie potrzebuje kreski przed sobą */
 .icons .group-label:first-child,
 .icons .scope-label + .group-label {
     display: none;
@@ -338,7 +328,6 @@ body.editing .notice {
     display: none;
 }
 
-/* Kropka statusu ostatniego uruchomienia: w ikonach w rogu, w liście przy prawej krawędzi */
 .status {
     flex: none;
     width: 6px;
@@ -390,12 +379,10 @@ body.editing .notice {
     }
 }
 
-/* Akcje edit / delete w wierszu listy */
 .row-actions {
     display: none;
 }
 
-/* focus-visible zamiast focus-within: po kliknięciu myszą akcje nie zostają na wierzchu */
 .list .cmd:hover .row-actions,
 .list .cmd:focus-visible .row-actions,
 .list .cmd:has(.icon-action:focus-visible) .row-actions {
@@ -419,7 +406,6 @@ body.editing .notice {
     cursor: pointer;
 }
 
-/* Stop / restart tylko przy działającej komendzie - wtedy widoczne bez najechania */
 .row-actions .icon-action.when-running {
     display: none;
 }
@@ -447,7 +433,6 @@ body.editing .notice {
     outline: 1px solid var(--vscode-focusBorder);
 }
 
-/* Przeciąganie: wyszarzony element i linia w miejscu upuszczenia */
 .cmd.dragging {
     opacity: 0.4;
 }
@@ -541,7 +526,6 @@ body.editing .notice {
     word-break: break-all;
 }
 
-/* Kolor tekstu, nie tła - klasy status-* współdzielone z kropką */
 .tooltip-status.status-running,
 .tooltip-status.status-success,
 .tooltip-status.status-error {
@@ -565,7 +549,6 @@ body.editing .notice {
     color: var(--vscode-descriptionForeground);
 }
 
-/* Formularz zastępuje przyciski, bo panel obok terminala jest niski */
 .form {
     display: none;
 }
@@ -652,7 +635,6 @@ body.editing .form {
     outline-offset: -1px;
 }
 
-/* Komenda z listą "Insert…" obok */
 .input-with-action {
     display: flex;
     gap: 6px;
@@ -668,7 +650,6 @@ body.editing .form {
     width: 84px;
 }
 
-/* Pytania dla ${input:…}: nazwa, typ, opcje (dla listy), wartość domyślna */
 .questions {
     display: flex;
     flex-direction: column;
@@ -701,7 +682,6 @@ body.editing .form {
     font-size: 12px;
 }
 
-/* Kilka checkboxów w jednym rzędzie */
 .checkbox-row {
     display: flex;
     flex-wrap: wrap;
@@ -728,7 +708,6 @@ body.editing .form {
     color: var(--vscode-descriptionForeground);
 }
 
-/* Checkbox w kolorach motywu */
 .field label.checkbox {
     display: inline-flex;
     align-items: center;
@@ -749,7 +728,6 @@ body.editing .form {
     accent-color: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
 }
 
-/* Zwijana sekcja z rzadziej używanymi polami */
 .advanced {
     margin-top: 8px;
 }
@@ -769,7 +747,6 @@ body.editing .form {
     margin-top: 6px;
 }
 
-/* Pole z kwadratowym podglądem (ikona / kolor) wyrównanym do wysokości inputa */
 .input-with-preview {
     display: flex;
     align-items: center;
@@ -801,7 +778,6 @@ body.editing .form {
     border-radius: 2px;
 }
 
-/* Własny wybór koloru - natywny picker na Windows otwiera jasne okno systemowe */
 .color-row {
     display: flex;
     flex-wrap: wrap;
@@ -843,7 +819,6 @@ body.editing .form {
     background: conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
 }
 
-/* Własny picker: pole nasycenie / jasność + pionowy pasek odcienia */
 .picker {
     display: flex;
     gap: 8px;

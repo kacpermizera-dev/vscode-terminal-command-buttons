@@ -1,19 +1,16 @@
 import { execFile } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 
-// Zakresy, do których zapisujemy; pozostałe (system, worktree, command) tylko do podglądu
 export type EditableScope = "global" | "local";
 
 export interface GitAlias {
   name: string;
   expansion: string;
-  // Alias zaczynający się od "!" uruchamia komendę shella, nie podkomendę gita
   shell: boolean;
-  // Zakres z --show-scope: global, local, system, worktree, command
   scope: string;
-  // Plik konfiguracji z --show-origin, jeśli alias pochodzi z pliku
   file?: string;
 }
 
@@ -21,13 +18,10 @@ export function isEditableScope(scope: string): scope is EditableScope {
   return scope === "global" || scope === "local";
 }
 
-// Nazwa zmiennej w git config: litera, potem litery, cyfry i myślniki
 export function isValidAliasName(name: string): boolean {
   return /^[A-Za-z][A-Za-z0-9-]*$/.test(name);
 }
 
-// Wyjście `git config -z --show-scope --show-origin --get-regexp`:
-// trójki zakres NUL źródło NUL klucz\nwartość NUL
 export function parseGitAliases(output: string): GitAlias[] {
   const byName = new Map<string, GitAlias>();
   const tokens = output.split("\0");
@@ -46,7 +40,6 @@ export function parseGitAliases(output: string): GitAlias[] {
     if (!name || !expansion) {
       continue;
     }
-    // Późniejszy wpis (np. z .git/config repo) wygrywa z globalnym, tak jak w gicie
     byName.set(name.toLowerCase(), {
       name,
       expansion,
@@ -58,7 +51,6 @@ export function parseGitAliases(output: string): GitAlias[] {
   return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// Alias wywoływany przez komendę przycisku, np. "git lg -5" -> lg
 export function findAliasForCommand(
   command: string,
   aliases: GitAlias[]
@@ -73,25 +65,91 @@ export function findAliasForCommand(
 
 interface GitResult {
   stdout: string;
-  // undefined = sukces
   code?: number | string;
   stderr: string;
 }
 
-function git(args: string[], cwd: string): Promise<GitResult> {
-  return new Promise((resolve) => {
-    execFile(
-      "git",
-      args,
-      { cwd, timeout: 3000, windowsHide: true },
-      (error, stdout, stderr) => {
-        resolve({ stdout, stderr: stderr.trim(), code: error?.code ?? undefined });
-      }
-    );
-  });
+interface GitExtensionApi {
+  getAPI(version: 1): { git: { path: string } };
 }
 
-// undefined = git się nie uruchomił (brak w PATH, zły katalog), [] = brak aliasów
+async function isFile(file: string): Promise<boolean> {
+  try {
+    return (await fs.promises.stat(file)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function isDirectory(dir: string): Promise<boolean> {
+  try {
+    return (await fs.promises.stat(dir)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function gitFromExtension(): string | undefined {
+  try {
+    const extension = vscode.extensions.getExtension<GitExtensionApi>("vscode.git");
+    const gitPath = extension?.isActive ? extension.exports.getAPI(1).git.path : undefined;
+    return gitPath && path.isAbsolute(gitPath) ? gitPath : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function findGitInPath(): Promise<string | undefined> {
+  const name = process.platform === "win32" ? "git.exe" : "git";
+  for (const entry of (process.env.PATH ?? "").split(path.delimiter)) {
+    const dir = entry.replace(/^"(.*)"$/, "$1");
+    if (!dir || !path.isAbsolute(dir)) {
+      continue;
+    }
+    const candidate = path.join(dir, name);
+    if (await isFile(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+let pathGit: Promise<string | undefined> | undefined;
+
+function findGit(): Promise<string | undefined> {
+  const fromExtension = gitFromExtension();
+  if (fromExtension) {
+    return Promise.resolve(fromExtension);
+  }
+  pathGit ??= findGitInPath().then((found) => {
+    if (!found) {
+      pathGit = undefined;
+    }
+    return found;
+  });
+  return pathGit;
+}
+
+function git(args: string[], cwd: string): Promise<GitResult> {
+  return findGit().then(
+    (file) =>
+      new Promise((resolve) => {
+        if (!file) {
+          resolve({ stdout: "", stderr: "Git was not found in PATH.", code: "ENOENT" });
+          return;
+        }
+        execFile(
+          file,
+          args,
+          { cwd, timeout: 3000, windowsHide: true },
+          (error, stdout, stderr) => {
+            resolve({ stdout, stderr: stderr.trim(), code: error?.code ?? undefined });
+          }
+        );
+      })
+  );
+}
+
 async function readGitAliases(cwd: string): Promise<GitAlias[] | undefined> {
   const result = await git(
     ["config", "-z", "--show-scope", "--show-origin", "--get-regexp", "^alias\\."],
@@ -100,7 +158,6 @@ async function readGitAliases(cwd: string): Promise<GitAlias[] | undefined> {
   if (result.code === undefined) {
     return parseGitAliases(result.stdout);
   }
-  // Kod 1 = żaden klucz nie pasuje
   if (result.code === 1) {
     return [];
   }
@@ -108,22 +165,11 @@ async function readGitAliases(cwd: string): Promise<GitAlias[] | undefined> {
   return undefined;
 }
 
-function isDirectory(dir: string): boolean {
-  try {
-    return fs.statSync(dir).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-// Katalogi do odczytu aliasów, od najlepszego. Git Bash potrafi zgłosić cwd
-// w formie /c/Users/..., które nie jest ścieżką Windows - takie pomijamy.
-// W nieufnym workspace tylko aliasy globalne: lokalny .git/config pochodzi z repo.
-function lookupDirs(): string[] {
+async function lookupDirs(): Promise<string[]> {
   const dirs: string[] = [];
   if (vscode.workspace.isTrusted) {
     const cwd = vscode.window.activeTerminal?.shellIntegration?.cwd;
-    if (cwd?.scheme === "file") {
+    if (cwd?.scheme === "file" && vscode.workspace.getWorkspaceFolder(cwd)) {
       dirs.push(cwd.fsPath);
     }
     vscode.workspace.workspaceFolders?.forEach((folder) => {
@@ -133,15 +179,52 @@ function lookupDirs(): string[] {
     });
   }
   dirs.push(os.homedir());
-  return dirs.filter(isDirectory);
+  const exists = await Promise.all(dirs.map(isDirectory));
+  return dirs.filter((_dir, i) => exists[i]);
 }
 
-// Lista aliasów odświeżana na żądanie (otwarcie listy, pokazanie widoku) i zapis zmian
+interface Snapshot {
+  aliases: GitAlias[];
+  dir: string;
+  inRepo: boolean;
+}
+
+async function load(): Promise<Snapshot> {
+  let aliases: GitAlias[] = [];
+  let dir = os.homedir();
+  for (const candidate of await lookupDirs()) {
+    const found = await readGitAliases(candidate);
+    if (found) {
+      aliases = found;
+      dir = candidate;
+      break;
+    }
+  }
+
+  let inRepo = false;
+  let toplevel: string | undefined;
+  if (vscode.workspace.isTrusted) {
+    const lines = (await git(["rev-parse", "--is-inside-work-tree", "--show-toplevel"], dir))
+      .stdout.split(/\r?\n/);
+    inRepo = lines[0]?.trim() === "true";
+    toplevel = inRepo ? lines[1]?.trim() || undefined : undefined;
+  }
+
+  const base = toplevel ?? dir;
+  aliases = aliases.map((alias) =>
+    alias.file && !path.isAbsolute(alias.file)
+      ? { ...alias, file: path.resolve(base, alias.file) }
+      : alias
+  );
+  return { aliases, dir, inRepo };
+}
+
 export class GitAliases implements vscode.Disposable {
   private _aliases: GitAlias[] = [];
-  // Katalog, z którego przeczytano aliasy - w nim zapisujemy aliasy repozytorium
   private _dir = os.homedir();
   private _inRepo = false;
+  private _running?: Promise<void>;
+  private _queued?: Promise<void>;
 
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   public readonly onDidChange = this._onDidChange.event;
@@ -150,30 +233,22 @@ export class GitAliases implements vscode.Disposable {
     return this._aliases;
   }
 
-  // Czy można zapisać alias do .git/config (zaufany workspace wewnątrz repozytorium)
   public get canEditLocal(): boolean {
     return this._inRepo;
   }
 
-  public async refresh() {
-    let next: GitAlias[] = [];
-    for (const dir of lookupDirs()) {
-      const aliases = await readGitAliases(dir);
-      if (aliases) {
-        next = aliases;
-        this._dir = dir;
-        break;
-      }
+  public refresh(): Promise<void> {
+    if (this._running) {
+      this._queued ??= this._running.then(() => {
+        this._queued = undefined;
+        return this.refresh();
+      });
+      return this._queued;
     }
-
-    this._inRepo =
-      vscode.workspace.isTrusted &&
-      (await git(["rev-parse", "--is-inside-work-tree"], this._dir)).stdout.trim() === "true";
-
-    if (JSON.stringify(next) !== JSON.stringify(this._aliases)) {
-      this._aliases = next;
-      this._onDidChange.fire();
-    }
+    this._running = this._refresh().finally(() => {
+      this._running = undefined;
+    });
+    return this._running;
   }
 
   public async set(scope: EditableScope, name: string, expansion: string) {
@@ -188,7 +263,22 @@ export class GitAliases implements vscode.Disposable {
     this._onDidChange.dispose();
   }
 
+  private async _refresh() {
+    try {
+      const snapshot = await load();
+      this._dir = snapshot.dir;
+      this._inRepo = snapshot.inRepo;
+      if (JSON.stringify(snapshot.aliases) !== JSON.stringify(this._aliases)) {
+        this._aliases = snapshot.aliases;
+        this._onDidChange.fire();
+      }
+    } catch (error) {
+      console.error("Failed to refresh git aliases:", error);
+    }
+  }
+
   private async _write(scope: EditableScope, args: string[]) {
+    await (this._queued ?? this._running);
     if (scope === "local" && !this._inRepo) {
       throw new Error("Not inside a trusted git repository.");
     }

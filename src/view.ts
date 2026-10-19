@@ -5,7 +5,6 @@ import { GitAliases, findAliasForCommand } from "./gitAliases";
 import { runButton } from "./inputs";
 import { Runner } from "./runner";
 
-// Losowy nonce dla Content Security Policy webview
 function getNonce(): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -16,11 +15,8 @@ function getNonce(): string {
   return nonce;
 }
 
-// Provider dla webview panelu
 export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
-  // Widok na Activity Bar
   public static readonly viewType = "terminalCommandButtons.buttonsView";
-  // Widok w panelu dolnym, do przeniesienia obok terminala
   public static readonly panelViewType = "terminalCommandButtons.panelView";
 
   private _view?: vscode.WebviewView;
@@ -41,6 +37,14 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
   ) {
     this._view = webviewView;
 
+    const disposables: vscode.Disposable[] = [];
+    webviewView.onDidDispose(() => {
+      if (this._view === webviewView) {
+        this._view = undefined;
+      }
+      disposables.forEach((d) => d.dispose());
+    });
+
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
@@ -48,7 +52,6 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-    // Aliasy mogły się zmienić, gdy widok był schowany
     webviewView.onDidChangeVisibility(
       () => {
         if (webviewView.visible) {
@@ -56,10 +59,9 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
         }
       },
       undefined,
-      this._context.subscriptions
+      disposables
     );
 
-    // Obsługa wiadomości z webview
     webviewView.webview.onDidReceiveMessage(
       (message) => {
         switch (message.type) {
@@ -90,7 +92,9 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
             break;
           case "reorderButtons":
             if (Array.isArray(message.ids)) {
-              this._store.reorder(message.ids);
+              this._store.reorder(
+                message.ids.filter((id: unknown): id is string => typeof id === "string")
+              );
             }
             break;
           case "getButtons":
@@ -100,15 +104,13 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
         }
       },
       undefined,
-      this._context.subscriptions
+      disposables
     );
   }
 
-  // Wysłanie przycisków do webview
   public sendButtonsToWebview() {
     if (this._view) {
       const buttons = this._store.getAll();
-      // Rozwinięcie aliasu do dymka przycisku, np. "git lg" -> "log --oneline --graph"
       const aliasHints: Record<string, string> = {};
       buttons.forEach((button) => {
         const alias = findAliasForCommand(button.command, this._gitAliases.all);
@@ -117,7 +119,6 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
         }
       });
 
-      // Przyciski już ułożone: zakres, w nim grupy; webview tylko rysuje nagłówki
       const arranged = arrangeButtons(buttons).map(({ button, section, group }) => ({
         ...button,
         section,
@@ -138,7 +139,6 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  // Sam status, bez przebudowy przycisków (nie gubi fokusu ani przeciągania)
   public sendStatusesToWebview() {
     this._view?.webview.postMessage({
       type: "statusUpdate",
@@ -147,17 +147,14 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  // Otwarcie formularza edycji w tym widoku
   public showEditForm(buttonId: string) {
     this._view?.webview.postMessage({ type: "editButton", buttonId });
   }
 
-  // Przycisk w nagłówku widoku: zwiń / rozwiń wszystkie sekcje
   public toggleCollapseAll() {
     this._view?.webview.postMessage({ type: "toggleCollapseAll" });
   }
 
-  // Generowanie HTML dla webview
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const nonce = getNonce();
     const codiconsUri = webview.asWebviewUri(

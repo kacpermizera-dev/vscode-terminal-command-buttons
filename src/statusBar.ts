@@ -12,7 +12,6 @@ function isIconName(value: string | undefined): value is string {
   return !!value && /^[a-z0-9-]+$/.test(value);
 }
 
-// Przyciski z "Show in status bar": ikona, nazwa i status ostatniego uruchomienia
 export class PinnedButtons implements vscode.Disposable {
   private readonly _items = new Map<string, PinnedItem>();
   private readonly _disposables: vscode.Disposable[] = [];
@@ -40,7 +39,6 @@ export class PinnedButtons implements vscode.Disposable {
     });
 
     pinned.forEach((button, index) => {
-      // Priorytetu nie da się zmienić po utworzeniu - przy zmianie kolejności tworzymy na nowo
       const priority = 100 - index;
       let pinnedItem = this._items.get(button.id);
       if (pinnedItem && pinnedItem.priority !== priority) {
