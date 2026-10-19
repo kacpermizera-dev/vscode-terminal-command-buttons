@@ -2,17 +2,17 @@
   "name": "terminal-command-buttons",
   "displayName": "Terminal Command Buttons",
   "description": "Add configurable command buttons to VS Code terminal",
-  "version": "0.0.1",
-  "publisher": "EboveR",
+  "version": "0.1.0",
+  "publisher": "kacpermizera-dev",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/EboveR/vscode-terminal-command-buttons.git"
+    "url": "https://github.com/kacpermizera-dev/vscode-terminal-command-buttons.git"
   },
   "bugs": {
-    "url": "https://github.com/EboveR/vscode-terminal-command-buttons/issues"
+    "url": "https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/issues"
   },
-  "homepage": "https://github.com/EboveR/vscode-terminal-command-buttons#readme",
+  "homepage": "https://github.com/kacpermizera-dev/vscode-terminal-command-buttons#readme",
   "keywords": [
     "terminal",
     "commands",
@@ -29,8 +29,23 @@
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Command buttons defined in workspace settings are ignored until the workspace is trusted.",
+      "restrictedConfigurations": [
+        "terminalCommandButtons.buttons"
+      ]
+    }
+  },
   "contributes": {
     "commands": [
+      {
+        "command": "terminalCommandButtons.dockToTerminal",
+        "title": "Show Buttons Next to Terminal",
+        "category": "Terminal Command Buttons",
+        "icon": "$(split-horizontal)"
+      },
       {
         "command": "terminalCommandButtons.openButtonsPanel",
         "title": "Open Terminal Command Buttons",
@@ -39,6 +54,27 @@
       {
         "command": "terminalCommandButtons.addButton",
         "title": "Add New Command Button",
+        "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.toggleLayout",
+        "title": "Toggle Icons / List Layout",
+        "category": "Terminal Command Buttons",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "terminalCommandButtons.runButton",
+        "title": "Run",
+        "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.editButton",
+        "title": "Edit Button",
+        "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.deleteButton",
+        "title": "Delete Button",
         "category": "Terminal Command Buttons"
       }
     ],
@@ -51,6 +87,14 @@
           "icon": "$(terminal)",
           "when": "true"
         }
+      ],
+      "terminalButtonsPanel": [
+        {
+          "type": "webview",
+          "id": "terminalCommandButtons.panelView",
+          "name": "Command Buttons",
+          "icon": "$(play)"
+        }
       ]
     },
     "viewsContainers": {
@@ -59,6 +103,13 @@
           "id": "terminalCommandButtons",
           "title": "Terminal Command Buttons",
           "icon": "$(terminal)"
+        }
+      ],
+      "panel": [
+        {
+          "id": "terminalButtonsPanel",
+          "title": "Command Buttons",
+          "icon": "$(play)"
         }
       ]
     },
@@ -87,13 +138,64 @@
               "color": {
                 "type": "string",
                 "description": "Color for the button"
+              },
+              "icon": {
+                "type": "string",
+                "description": "Codicon name shown on the button, e.g. git-branch, play, sync (https://microsoft.github.io/vscode-codicons/dist/codicon.html)"
               }
             }
           }
+        },
+        "terminalCommandButtons.layout": {
+          "type": "string",
+          "enum": [
+            "icons",
+            "list"
+          ],
+          "enumDescriptions": [
+            "Compact icon buttons, name and command shown on hover",
+            "One row per button with name and command"
+          ],
+          "default": "icons",
+          "description": "How command buttons are displayed"
+        },
+        "terminalCommandButtons.windowsLeadingSpace": {
+          "type": "boolean",
+          "default": true,
+          "description": "On Windows, prefix commands with a space. Works around a VS Code bug where Git Bash drops the first character of text sent to the terminal (microsoft/vscode#275625)."
         }
       }
     },
     "menus": {
+      "view/title": [
+        {
+          "command": "terminalCommandButtons.toggleLayout",
+          "when": "view == terminalCommandButtons.panelView || view == terminalCommandButtons.buttonsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "terminalCommandButtons.dockToTerminal",
+          "when": "view == terminalCommandButtons.panelView",
+          "group": "navigation@2"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "terminalCommandButtons.runButton",
+          "when": "webviewSection == 'terminalCommandButtons.button'",
+          "group": "1_run"
+        },
+        {
+          "command": "terminalCommandButtons.editButton",
+          "when": "webviewSection == 'terminalCommandButtons.button'",
+          "group": "2_edit@1"
+        },
+        {
+          "command": "terminalCommandButtons.deleteButton",
+          "when": "webviewSection == 'terminalCommandButtons.button'",
+          "group": "2_edit@2"
+        }
+      ],
       "commandPalette": [
         {
           "command": "terminalCommandButtons.openButtonsPanel",
@@ -102,6 +204,22 @@
         {
           "command": "terminalCommandButtons.addButton",
           "when": "true"
+        },
+        {
+          "command": "terminalCommandButtons.dockToTerminal",
+          "when": "true"
+        },
+        {
+          "command": "terminalCommandButtons.runButton",
+          "when": "false"
+        },
+        {
+          "command": "terminalCommandButtons.editButton",
+          "when": "false"
+        },
+        {
+          "command": "terminalCommandButtons.deleteButton",
+          "when": "false"
         }
       ]
     }
@@ -118,17 +236,20 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.101.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.101.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "typescript": "^5.8.3",
-    "ts-loader": "^9.5.2",
-    "webpack": "^5.99.7",
-    "webpack-cli": "^6.0.1",
     "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.25.1",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.7",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.36"
   }
 }

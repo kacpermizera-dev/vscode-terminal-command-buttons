@@ -12,3 +12,10 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+!node_modules/@vscode/codicons/dist/codicon.css
+!node_modules/@vscode/codicons/dist/codicon.ttf
+.github/**
+RELEASE_GUIDE.md
+GITHUB_SETUP.md
+DEBUGGING.md
+INSTALLATION.md

@@ -5,22 +5,23 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 ![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Language-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-[![Latest Release](https://img.shields.io/github/v/release/EboveR/vscode-terminal-command-buttons)](https://github.com/EboveR/vscode-terminal-command-buttons/releases)
+[![Latest Release](https://img.shields.io/github/v/release/kacpermizera-dev/vscode-terminal-command-buttons)](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/releases)
 
 ## ✨ Features
 
 - **🎯 Quick Commands**: Add custom command buttons for instant execution
-- **📋 Scrollable Panel**: View and manage all your commands in a clean interface
-- **⚙️ Easy Configuration**: Add, edit, and delete buttons directly from the UI
-- **🎨 Color Coding**: Assign custom colors to organize your commands
+- **🪟 Next to the Terminal**: Keep the buttons in a split view right beside your terminal
+- **🧩 Icons or List**: Compact icon buttons with hover details, or a list with name and command
+- **⚙️ Easy Configuration**: Add, edit, delete and reorder buttons directly from the UI
+- **🎨 Color Coding**: Pick a color from the palette or a custom one
 - **💾 Persistent Storage**: Your buttons are saved in workspace/user settings
 - **🔗 Terminal Integration**: Commands execute in your active terminal
 
-## � Installation
+## 📦 Installation
 
 ### Option 1: Download Release (Recommended)
 
-1. Go to [Releases](https://github.com/EboveR/vscode-terminal-command-buttons/releases)
+1. Go to [Releases](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/releases)
 2. Download the latest `terminal-command-buttons-x.x.x.vsix` file
 3. Open VS Code
 4. Press `Ctrl+Shift+P` and type "Extensions: Install from VSIX..."
@@ -30,42 +31,34 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 ### Option 2: Build from Source
 
 ```bash
-git clone https://github.com/EboveR/vscode-terminal-command-buttons.git
+git clone https://github.com/kacpermizera-dev/vscode-terminal-command-buttons.git
 cd vscode-terminal-command-buttons
 npm install
 npm run package
-code --install-extension terminal-command-buttons-0.0.1.vsix
+npx @vscode/vsce package
+code --install-extension terminal-command-buttons-0.1.0.vsix
 ```
 
 ## 🚀 Quick Start
 
 ### Getting Started
 
-1. After installation, look for the **terminal icon** in Activity Bar (left sidebar)
-2. Click the icon to open the Terminal Commands panel
-3. Or use Command Palette (`Ctrl+Shift+P`) → "Terminal Command Buttons: Open Terminal Command Buttons"
+1. Open the **Command Buttons** tab in the bottom panel (next to Terminal, Problems, Output)
+2. Click the split icon in its header to move it **next to the terminal**
+3. The buttons are also available from the **terminal icon** in the Activity Bar (left sidebar)
 
 ### Adding Your First Button
 
-1. Click the **"+ Add"** button in the Terminal Commands panel
+1. Click the **+** tile after your buttons
 2. Enter:
-   - **Button Name**: Display name (e.g., "List Files")
+   - **Name**: Display name (e.g., "List Files")
    - **Command**: Command to execute (e.g., `ls -la`)
-   - **Color**: Choose a color for visual organization
-3. Click **"Save"**
+   - **Icon** (optional): A [codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) name (e.g., `git-branch`); without it the button shows the name's initials
+   - **Color**: Pick one from the palette, or the rainbow tile for a custom color
+3. Click **"Add"**
 4. Click your new button to execute the command!
 
 ## 🎯 Usage
-
-### Pre-configured Buttons
-
-The extension comes with useful default buttons:
-
-- 📁 **List Files** - `ls -la`
-- 🟢 **Node.js Version** - `node --version`
-- 📦 **NPM Version** - `npm --version`
-- 🌿 **Git Status** - `git status`
-- 📍 **Current Directory** - `pwd`
 
 ### Custom Commands
 
@@ -79,10 +72,13 @@ Add any command you use frequently:
 
 ### Managing Buttons
 
-- **Execute**: Click any button to run its command
-- **Delete**: Click the "×" button on any command button
-- **Add New**: Use the "+ Add" button or Command Palette
-- **Organize**: Use different colors to group related commands
+- **Execute**: Click any button to run its command (or focus it and press `Enter`)
+- **Details**: Hover a button in the icon layout to see its name and command
+- **Edit / Delete**: Right-click a button, or use the pencil and trash icons on hover in the list layout
+- **Reorder**: Drag a button to a new position, or focus it and press `Alt+Arrow`
+- **Layout**: Switch between icons and list with the layout icon in the view header
+- **Add New**: Use the **+** tile or Command Palette
+- **Organize**: Use different colors and icons to group related commands
 
 ## ⚙️ Configuration
 
@@ -95,11 +91,20 @@ The extension stores button configurations in VS Code settings:
       "id": "unique-id",
       "name": "My Command",
       "command": "echo 'Hello World'",
-      "color": "#007acc"
+      "color": "#3794ff",
+      "icon": "terminal"
     }
-  ]
+  ],
+  "terminalCommandButtons.layout": "icons",
+  "terminalCommandButtons.windowsLeadingSpace": true
 }
 ```
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `terminalCommandButtons.buttons` | `[]` | Your command buttons. In untrusted workspaces, buttons from workspace settings are ignored. |
+| `terminalCommandButtons.layout` | `icons` | `icons` for compact icon buttons, `list` for one row per button. |
+| `terminalCommandButtons.windowsLeadingSpace` | `true` | On Windows, prefix commands with a space. Works around Git Bash dropping the first character ([microsoft/vscode#275625](https://github.com/microsoft/vscode/issues/275625)). |
 
 ## 🔧 Commands
 
@@ -107,6 +112,8 @@ Access these commands via the Command Palette:
 
 - **Terminal Command Buttons: Open Terminal Command Buttons** - Open the buttons panel
 - **Terminal Command Buttons: Add New Command Button** - Add a button via input prompts
+- **Terminal Command Buttons: Show Buttons Next to Terminal** - Move the panel view next to the terminal
+- **Terminal Command Buttons: Toggle Icons / List Layout** - Switch the button layout
 
 ## 📋 Requirements
 
@@ -141,13 +148,7 @@ src/
 
 ## 📝 Changelog
 
-### 0.0.1
-
-- ✅ Initial release
-- ✅ Configurable command buttons
-- ✅ Terminal integration
-- ✅ Color-coded organization
-- ✅ Persistent storage
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## 📄 License
 
