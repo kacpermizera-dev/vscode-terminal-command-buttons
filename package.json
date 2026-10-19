@@ -2,7 +2,7 @@
   "name": "terminal-command-buttons",
   "displayName": "Terminal Command Buttons",
   "description": "One-click buttons for your terminal commands, right next to the terminal: run status, variables, groups, stop/restart and git aliases.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "kacpermizera-dev",
   "license": "MIT",
   "icon": "images/icon.png",

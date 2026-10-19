@@ -4,6 +4,13 @@ All notable changes to the "terminal-command-buttons" extension will be document
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.1] - 2026-10-19
+
+### Fixed
+
+- The tooltip of a button with a long command no longer covers the button itself, so **Stop**, **Restart**, **Edit** and **Delete** in the list layout can be clicked. It opens on the side with more room, is cut to fit, and hides when the pointer reaches the row buttons.
+- A running command can be stopped in the icons layout: hovering a running button shows a stop icon, and clicking it stops the command. **Restart** stays in the right-click menu.
+
 ## [1.0.0] - 2026-10-19
 
 First release on the VS Code Marketplace.

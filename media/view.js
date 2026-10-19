@@ -255,6 +255,10 @@ function render() {
             createText('command', button.command)
         );
 
+        const stopIcon = document.createElement('span');
+        stopIcon.className = 'stop-icon codicon codicon-debug-stop';
+        stopIcon.setAttribute('aria-hidden', 'true');
+
         const status = document.createElement('span');
         status.className = 'status';
         status.hidden = true;
@@ -263,11 +267,12 @@ function render() {
         el.append(
             grip,
             createIcon(button.icon, button.name),
+            stopIcon,
             text,
             status,
             createRowActions(button)
         );
-        el.addEventListener('click', () => runButton(button));
+        el.addEventListener('click', () => activateButton(button));
         el.addEventListener('keydown', (e) => {
             if (e.target !== el) {
                 return;
@@ -280,7 +285,7 @@ function render() {
                 moveBy(button.id, 1);
             } else if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                runButton(button);
+                activateButton(button);
             }
         });
         attachTooltip(el, button.name, button.command, button);
@@ -438,6 +443,16 @@ function fillGroupList(groups) {
     });
 }
 
+function activateButton(button) {
+    const status = statuses[button.id];
+    if (layout === 'icons' && status && status.state === 'running') {
+        hideTooltip();
+        vscode.postMessage({ type: 'stopButton', buttonId: button.id });
+    } else {
+        runButton(button);
+    }
+}
+
 function runButton(button) {
     hideTooltip();
     vscode.postMessage({ type: 'runButton', buttonId: button.id });
@@ -446,6 +461,7 @@ function runButton(button) {
 function createRowActions(button) {
     const wrap = document.createElement('span');
     wrap.className = 'row-actions';
+    wrap.addEventListener('mouseenter', hideTooltip);
     [
         ['debug-stop', 'Stop', 'when-running', () => vscode.postMessage({ type: 'stopButton', buttonId: button.id })],
         ['debug-restart', 'Restart', 'when-running', () => vscode.postMessage({ type: 'restartButton', buttonId: button.id })],
@@ -668,9 +684,12 @@ function showTooltip(anchor, name, command, button) {
         tooltipEl.append(createText('tooltip-status status-' + status.state, formatStatus(status)));
     }
     if (command) {
-        const hint = status && status.state === 'running'
-            ? 'Right-click to stop or restart'
-            : 'Click to run · Right-click to edit · Drag to reorder';
+        const running = status && status.state === 'running';
+        const hint = running && layout === 'icons'
+            ? 'Click to stop · Right-click to restart'
+            : running
+                ? 'Right-click to stop or restart'
+                : 'Click to run · Right-click to edit · Drag to reorder';
         tooltipEl.append(createText('tooltip-hint', hint));
     }
     tooltipEl.style.display = 'block';
@@ -681,12 +700,17 @@ function showTooltip(anchor, name, command, button) {
         tooltipTimer = setTimeout(tooltipAnchor.refresh, 1000);
     }
 
+    tooltipEl.style.maxHeight = '';
     const a = anchor.getBoundingClientRect();
-    const t = tooltipEl.getBoundingClientRect();
-    let top = a.bottom + 6;
-    if (top + t.height > window.innerHeight - 4) {
-        top = Math.max(4, a.top - t.height - 6);
+    const below = window.innerHeight - a.bottom - 10;
+    const above = a.top - 10;
+    let t = tooltipEl.getBoundingClientRect();
+    const placeBelow = t.height <= below || below >= above;
+    if (t.height > Math.max(below, above)) {
+        tooltipEl.style.maxHeight = Math.max(0, placeBelow ? below : above) + 'px';
+        t = tooltipEl.getBoundingClientRect();
     }
+    const top = placeBelow ? a.bottom + 6 : a.top - t.height - 6;
     let left = a.left + a.width / 2 - t.width / 2;
     left = Math.max(4, Math.min(left, window.innerWidth - t.width - 4));
 

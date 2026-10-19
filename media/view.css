@@ -74,6 +74,21 @@ body {
     font-size: 16px;
 }
 
+.cmd .stop-icon {
+    display: none;
+    font-size: 16px;
+}
+
+.icons .cmd.running:hover .icon,
+.icons .cmd.running:focus-visible .icon {
+    display: none;
+}
+
+.icons .cmd.running:hover .stop-icon,
+.icons .cmd.running:focus-visible .stop-icon {
+    display: inline-flex;
+}
+
 .cmd .initials {
     font-size: 11px;
     font-weight: 600;
@@ -485,6 +500,8 @@ body.editing .notice {
     background: var(--vscode-editorHoverWidget-background);
     color: var(--vscode-editorHoverWidget-foreground);
     box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+    box-sizing: border-box;
+    overflow: hidden;
     pointer-events: none;
 }
 
