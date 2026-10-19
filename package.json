@@ -2,7 +2,7 @@
   "name": "terminal-command-buttons",
   "displayName": "Terminal Command Buttons",
   "description": "Add configurable command buttons to VS Code terminal",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "kacpermizera-dev",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Command buttons defined in workspace settings are ignored until the workspace is trusted.",
+      "description": "Command buttons from the project's .vscode/settings.json and repository git aliases are ignored until the workspace is trusted.",
       "restrictedConfigurations": [
         "terminalCommandButtons.buttons"
       ]
@@ -87,6 +87,21 @@
         "category": "Terminal Command Buttons"
       },
       {
+        "command": "terminalCommandButtons.moveWorkspaceButtons",
+        "title": "Move Buttons from .vscode/settings.json into VS Code",
+        "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.stopButton",
+        "title": "Stop",
+        "category": "Terminal Command Buttons"
+      },
+      {
+        "command": "terminalCommandButtons.restartButton",
+        "title": "Restart",
+        "category": "Terminal Command Buttons"
+      },
+      {
         "command": "terminalCommandButtons.editButton",
         "title": "Edit Button",
         "category": "Terminal Command Buttons"
@@ -138,7 +153,7 @@
         "terminalCommandButtons.buttons": {
           "type": "array",
           "default": [],
-          "description": "List of custom command buttons",
+          "description": "Command buttons shown in every workspace. Buttons marked \"Only in this workspace\" are stored inside VS Code, not here and not in the project's files.",
           "items": {
             "type": "object",
             "properties": {
@@ -161,6 +176,58 @@
               "icon": {
                 "type": "string",
                 "description": "Codicon name shown on the button, e.g. git-branch, play, sync (https://microsoft.github.io/vscode-codicons/dist/codicon.html)"
+              },
+              "terminal": {
+                "type": "string",
+                "description": "Name of a terminal used only by this button, e.g. dev. Created when needed. Without it the command runs in the active terminal."
+              },
+              "inputs": {
+                "type": "array",
+                "description": "Questions for ${input:id} variables in the command. Without a definition, ${input:id} shows a text box.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[\\w-]+$",
+                      "description": "Name used in ${input:id}"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "promptString",
+                        "pickString"
+                      ],
+                      "default": "promptString",
+                      "enumDescriptions": [
+                        "Text box",
+                        "Pick one of the options"
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Shown as the question's title"
+                    },
+                    "default": {
+                      "type": "string",
+                      "description": "Value used before anything was entered; afterwards the last value is suggested"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Options for pickString"
+                    },
+                    "password": {
+                      "type": "boolean",
+                      "description": "Hide the typed value and do not remember it"
+                    }
+                  }
+                }
               }
             }
           }
@@ -223,7 +290,17 @@
         {
           "command": "terminalCommandButtons.runButton",
           "when": "webviewSection == 'terminalCommandButtons.button'",
-          "group": "1_run"
+          "group": "1_run@1"
+        },
+        {
+          "command": "terminalCommandButtons.stopButton",
+          "when": "webviewSection == 'terminalCommandButtons.button' && running",
+          "group": "1_run@2"
+        },
+        {
+          "command": "terminalCommandButtons.restartButton",
+          "when": "webviewSection == 'terminalCommandButtons.button' && running",
+          "group": "1_run@3"
         },
         {
           "command": "terminalCommandButtons.editButton",
@@ -255,6 +332,14 @@
         },
         {
           "command": "terminalCommandButtons.runButton",
+          "when": "false"
+        },
+        {
+          "command": "terminalCommandButtons.stopButton",
+          "when": "false"
+        },
+        {
+          "command": "terminalCommandButtons.restartButton",
           "when": "false"
         },
         {

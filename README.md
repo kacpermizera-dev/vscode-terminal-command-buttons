@@ -16,9 +16,11 @@ A VS Code extension that adds configurable command buttons to your terminal inte
 - **🚦 Run Status**: A dot on each button shows whether its last run is running, succeeded or failed
 - **▶️ Terminal Toolbar**: **Run Command Button…** and **Rerun Last Command** right in the terminal's title bar
 - **🌿 Git Aliases**: See your git aliases and what they expand to, add, edit or delete them without touching `.gitconfig`
+- **🔤 Variables**: `${input:name}` asks for a value when you click; `${file}`, `${workspaceFolder}`, `${selectedText}` and more come from the editor
+- **🗂️ Global or Per Workspace**: Keep a button everywhere, or only in the current workspace
+- **⏹️ Own Terminal, Stop / Restart**: Give a long-running command (dev server, watcher) its own terminal and stop or restart it from the button
 - **🎨 Color Coding**: Pick a color from the palette or a custom one
-- **💾 Persistent Storage**: Your buttons are saved in workspace/user settings
-- **🔗 Terminal Integration**: Commands execute in your active terminal
+- **🔒 Nothing in Your Repository**: Buttons live in VS Code (user settings and workspace storage), never in the project's files
 
 ## 📦 Installation
 
@@ -39,7 +41,7 @@ cd vscode-terminal-command-buttons
 npm install
 npm run package
 npx @vscode/vsce package
-code --install-extension terminal-command-buttons-0.2.0.vsix
+code --install-extension terminal-command-buttons-0.3.0.vsix
 ```
 
 ## 🚀 Quick Start
@@ -58,6 +60,8 @@ code --install-extension terminal-command-buttons-0.2.0.vsix
    - **Command**: Command to execute (e.g., `ls -la`)
    - **Icon** (optional): A [codicon](https://microsoft.github.io/vscode-codicons/dist/codicon.html) name (e.g., `git-branch`); without it the button shows the name's initials
    - **Color**: Pick one from the palette, or the rainbow tile for a custom color
+   - **Only in this workspace** (optional): Show the button only in the folder or workspace that is open now
+   - **Advanced** (optional): A terminal of its own, see below
 3. Click **"Add"**
 4. Click your new button to execute the command!
 
@@ -78,10 +82,49 @@ Add any command you use frequently:
 - **Execute**: Click any button to run its command (or focus it and press `Enter`)
 - **Details**: Hover a button to see its full command, the git alias it calls and its last run
 - **Edit / Delete**: Right-click a button, or use the pencil and trash icons on hover in the list layout
-- **Reorder**: Drag a button to a new position, or focus it and press `Alt+Arrow`
+- **Reorder**: Drag a button to a new position within its group, or focus it and press `Alt+Arrow`
 - **Layout**: Switch between icons and list with the layout icon in the view header
 - **Add New**: Use the **+** tile or Command Palette
 - **Organize**: Use different colors and icons to group related commands
+
+### Global and Workspace Buttons
+
+Each button is either shown in **all workspaces** (the default) or **only in this workspace** (the checkbox in the form). When you have both kinds, the view groups them: workspace buttons first, then global ones.
+
+Nothing is written to your project:
+
+- Global buttons are stored in your **user settings** (`terminalCommandButtons.buttons`) and follow you through Settings Sync.
+- Workspace buttons are stored in **VS Code's own storage** for that workspace, outside the project folder, so they never show up in `git status`.
+
+Buttons that older versions saved in a project's `.vscode/settings.json` still show up in the workspace group. A bar at the top of the view offers to **Move into VS Code** (or **Keep** them where they are); the same is available as **Move Buttons from .vscode/settings.json into VS Code** in the Command Palette.
+
+### Variables and Inputs
+
+Commands can contain variables that are filled in when you click the button. You don't have to type them: use **Insert…** next to the Command field to add one at the cursor.
+
+| Variable | Value |
+| --- | --- |
+| `${input:name}` | Asks you for a value. The last value is suggested next time. |
+| `${file}`, `${relativeFile}`, `${fileBasename}`, `${fileBasenameNoExtension}`, `${fileExtname}`, `${fileDirname}` | The file open in the editor |
+| `${workspaceFolder}`, `${workspaceFolderBasename}` | The workspace folder of that file, or the first folder |
+| `${selectedText}`, `${lineNumber}` | The selection and cursor line in the editor |
+| `${env:NAME}` | An environment variable |
+
+Other `${...}` text, such as `${HOME}` in bash, is left alone for the shell. Values are inserted as they are, so add quotes where the shell needs them, e.g. `git commit -m "${input:message}"` or `npx jest "${relativeFile}"`. Pressing `Esc` at a question cancels the run. **Rerun Last Command** repeats the command with the same values.
+
+**Insert… → Ask when clicked** adds `${input:value}` with the name selected, so you can type a better one (e.g. `branch`). For every question in the command, the form shows a row under **Questions**:
+
+- **Text**: a text box when you click the button
+- **List**: pick one of the options you enter, separated by commas (e.g. `main, develop`)
+- **Default** (optional): the first suggestion; after that your last answer is suggested
+
+In user `settings.json` the same is stored as `inputs`, like in `tasks.json`; there you can also add a `description` or `"password": true`.
+
+### Own Terminal, Stop and Restart
+
+Put a name under **Advanced → Terminal** (e.g. `dev`) to run the button in its own terminal instead of the active one. The terminal is created when needed and reused afterwards, so a dev server or a watcher does not block the terminal you work in.
+
+While a command runs, its row in the list layout shows **Stop** (sends `Ctrl+C`) and **Restart** (stops, waits for the command to end, runs it again). In the icon layout, right-click the button. Stop and restart need shell integration, like the run status.
 
 ### Run Status
 
@@ -111,17 +154,26 @@ If a button's command calls an alias (e.g. `git lg -5`), its tooltip shows the a
 
 ## ⚙️ Configuration
 
-The extension stores button configurations in VS Code settings:
+Global buttons can also be edited in your user `settings.json`:
 
 ```json
 {
   "terminalCommandButtons.buttons": [
     {
       "id": "unique-id",
-      "name": "My Command",
-      "command": "echo 'Hello World'",
+      "name": "Checkout",
+      "command": "git checkout ${input:branch}",
       "color": "#3794ff",
-      "icon": "terminal"
+      "icon": "git-branch",
+      "inputs": [{ "id": "branch", "type": "pickString", "options": ["main", "develop"] }]
+    },
+    {
+      "id": "dev-server",
+      "name": "Dev server",
+      "command": "npm run dev",
+      "color": "#89d185",
+      "icon": "rocket",
+      "terminal": "dev"
     }
   ],
   "terminalCommandButtons.layout": "icons",
@@ -131,7 +183,7 @@ The extension stores button configurations in VS Code settings:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `terminalCommandButtons.buttons` | `[]` | Your command buttons. In untrusted workspaces, buttons from workspace settings are ignored. |
+| `terminalCommandButtons.buttons` | `[]` | Buttons shown in every workspace. Workspace-only buttons are stored inside VS Code instead. |
 | `terminalCommandButtons.layout` | `icons` | `icons` for compact icon buttons, `list` for one row per button. |
 | `terminalCommandButtons.windowsLeadingSpace` | `true` | On Windows, prefix commands with a space. Works around Git Bash dropping the first character ([microsoft/vscode#275625](https://github.com/microsoft/vscode/issues/275625)). |
 
@@ -166,9 +218,11 @@ Access these commands via the Command Palette:
 ```
 src/
 ├── extension.ts          # Activation, commands
-├── buttons.ts            # Reading and saving buttons in settings
+├── buttons.ts            # Button store: user settings and workspace storage
 ├── runner.ts             # Sends commands to the terminal, tracks run status
 ├── runStatus.ts          # Status types and formatting
+├── variables.ts          # ${...} variables: parsing, substitution, inputs validation
+├── inputs.ts             # Asks for ${input:…} values, runs a button
 ├── gitAliases.ts         # Reads, parses and writes git aliases
 ├── aliasManager.ts       # "Git Aliases…" list with add / edit / delete
 ├── picker.ts             # "Run Command Button…" quick pick

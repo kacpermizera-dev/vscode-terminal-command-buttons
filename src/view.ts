@@ -1,12 +1,7 @@
 import * as vscode from "vscode";
-import {
-  deleteButton,
-  getButtons,
-  getLayout,
-  reorderButtons,
-  saveButton,
-} from "./buttons";
+import { ButtonStore, getLayout } from "./buttons";
 import { GitAliases, findAliasForCommand } from "./gitAliases";
+import { runButton } from "./inputs";
 import { Runner } from "./runner";
 
 // Losowy nonce dla Content Security Policy webview
@@ -33,6 +28,7 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
     private readonly _viewType: string,
     private readonly _extensionUri: vscode.Uri,
     private readonly _context: vscode.ExtensionContext,
+    private readonly _store: ButtonStore,
     private readonly _runner: Runner,
     private readonly _gitAliases: GitAliases
   ) {}
@@ -66,18 +62,34 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       (message) => {
         switch (message.type) {
-          case "executeCommand":
-            this._runner.run(message.command);
+          case "runButton": {
+            const button = this._store.find(message.buttonId);
+            if (button) {
+              runButton(this._runner, button, this._context.globalState);
+            }
+            break;
+          }
+          case "stopButton":
+            this._runner.stop(message.buttonId);
+            break;
+          case "restartButton":
+            this._runner.restart(message.buttonId);
             break;
           case "saveButton":
-            saveButton(message.button);
+            this._store.save(message.button);
             break;
           case "deleteButton":
-            deleteButton(message.buttonId);
+            this._store.delete(message.buttonId);
+            break;
+          case "migrateLegacy":
+            this._store.migrateLegacy();
+            break;
+          case "dismissLegacy":
+            this._store.dismissLegacy();
             break;
           case "reorderButtons":
             if (Array.isArray(message.ids)) {
-              reorderButtons(message.ids);
+              this._store.reorder(message.ids);
             }
             break;
           case "getButtons":
@@ -94,7 +106,7 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
   // Wysłanie przycisków do webview
   public sendButtonsToWebview() {
     if (this._view) {
-      const buttons = getButtons();
+      const buttons = this._store.getAll();
       // Rozwinięcie aliasu do dymka przycisku, np. "git lg" -> "log --oneline --graph"
       const aliasHints: Record<string, string> = {};
       buttons.forEach((button) => {
@@ -108,6 +120,8 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
         type: "buttonsUpdate",
         buttons,
         layout: getLayout(),
+        hasWorkspace: this._store.hasWorkspace,
+        legacyCount: this._store.showLegacyNotice ? this._store.legacyCount : 0,
         aliasHints,
         statuses: this._runner.getStatuses(),
         now: Date.now(),
@@ -160,6 +174,15 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
     <title>Terminal Command Buttons</title>
 </head>
 <body data-view="${this._viewType}">
+    <div class="notice" id="legacyNotice" role="status" hidden>
+        <span class="codicon codicon-info notice-icon" aria-hidden="true"></span>
+        <span class="notice-text" id="legacyText"></span>
+        <span class="notice-actions">
+            <button type="button" class="primary" id="legacyMove">Move into VS Code</button>
+            <button type="button" class="secondary" id="legacyKeep">Keep</button>
+        </span>
+    </div>
+
     <div class="buttons" id="buttons"></div>
 
     <form class="form" id="form" novalidate>
@@ -170,7 +193,25 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
             </div>
             <div class="field field-command">
                 <label for="command">Command</label>
-                <input id="command" placeholder="git status" autocomplete="off">
+                <div class="input-with-action">
+                    <input id="command" placeholder="git status" autocomplete="off" spellcheck="false">
+                    <select id="insertVariable" aria-label="Insert a variable into the command" title="Insert a variable at the cursor">
+                        <option value="">Insert…</option>
+                        <option value="input">Ask when clicked</option>
+                        <option value="file">Current file (full path)</option>
+                        <option value="relativeFile">Current file (relative)</option>
+                        <option value="fileBasename">Current file name</option>
+                        <option value="fileDirname">Current file folder</option>
+                        <option value="workspaceFolder">Workspace folder</option>
+                        <option value="selectedText">Selected text</option>
+                        <option value="lineNumber">Line number</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field field-full" id="questionsField" hidden>
+                <label>Questions</label>
+                <div class="questions" id="questions"></div>
+                <div class="field-hint">Asked each time you click the button. Your last answer is suggested next time.</div>
             </div>
             <div class="field">
                 <label for="icon">Icon</label>
@@ -193,7 +234,24 @@ export class TerminalButtonsProvider implements vscode.WebviewViewProvider {
                     <div class="hue" id="hue"><div class="hue-thumb" id="hueThumb"></div></div>
                 </div>
             </div>
+            <div class="field field-full" id="scopeField">
+                <label class="checkbox">
+                    <input type="checkbox" id="workspaceOnly">
+                    Only in this workspace
+                </label>
+                <div class="field-hint" id="scopeHint"></div>
+            </div>
         </div>
+        <details class="advanced" id="advanced">
+            <summary>Advanced</summary>
+            <div class="fields">
+                <div class="field">
+                    <label for="terminal">Terminal</label>
+                    <input id="terminal" placeholder="Active terminal" autocomplete="off" spellcheck="false">
+                    <div class="field-hint">A name gives the button its own terminal, e.g. dev.</div>
+                </div>
+            </div>
+        </details>
         <datalist id="iconList"></datalist>
         <div class="error" id="error"></div>
         <div class="actions">

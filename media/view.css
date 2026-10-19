@@ -186,6 +186,85 @@ body {
     visibility: visible;
 }
 
+/* Belka o starych przyciskach w .vscode/settings.json, chowana przy edycji */
+.notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-focusBorder));
+    border-radius: 3px;
+    background: var(--vscode-inputValidation-infoBackground, transparent);
+    font-size: 12px;
+}
+
+.notice[hidden],
+body.editing .notice {
+    display: none;
+}
+
+.notice-icon {
+    flex: none;
+    color: var(--vscode-notificationsInfoIcon-foreground, var(--vscode-focusBorder));
+}
+
+.notice-text {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.notice-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.notice-actions button {
+    padding: 2px 10px;
+    border: none;
+    border-radius: 2px;
+    font: inherit;
+    cursor: pointer;
+}
+
+/* Grupy "This workspace" / "All workspaces": w liście nagłówek, w ikonach pionowa kreska */
+.group-label {
+    flex: none;
+    user-select: none;
+}
+
+.list .group-label {
+    padding: 6px 8px 2px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.list .group-label:first-child {
+    padding-top: 0;
+}
+
+.icons .group-label {
+    align-self: center;
+    width: 1px;
+    height: 24px;
+    margin: 0 2px;
+    background: var(--vscode-widget-border, var(--vscode-descriptionForeground));
+    opacity: 0.6;
+}
+
+/* Pierwsza grupa w ikonach nie potrzebuje kreski przed sobą */
+.icons .group-label:first-child {
+    display: none;
+}
+
+.icons .group-label .group-text {
+    display: none;
+}
+
 /* Kropka statusu ostatniego uruchomienia: w ikonach w rogu, w liście przy prawej krawędzi */
 .status {
     flex: none;
@@ -265,6 +344,26 @@ body {
     background: transparent;
     color: var(--vscode-icon-foreground, var(--vscode-foreground));
     cursor: pointer;
+}
+
+/* Stop / restart tylko przy działającej komendzie - wtedy widoczne bez najechania */
+.row-actions .icon-action.when-running {
+    display: none;
+}
+
+.list .cmd.running .row-actions {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    margin-left: auto;
+}
+
+.list .cmd.running .row-actions .icon-action.when-running {
+    display: inline-flex;
+}
+
+.list .cmd.running:not(:hover):not(:focus-visible) .row-actions .icon-action:not(.when-running) {
+    display: none;
 }
 
 .row-actions .icon-action:hover {
@@ -351,10 +450,15 @@ body {
 }
 
 .tooltip-alias,
+.tooltip-meta,
 .tooltip-status {
     display: block;
     margin-top: 3px;
     font-size: 11px;
+}
+
+.tooltip-meta {
+    color: var(--vscode-descriptionForeground);
 }
 
 .tooltip-alias {
@@ -427,7 +531,8 @@ body.editing .form {
     color: var(--vscode-descriptionForeground);
 }
 
-.field input {
+.field input:not([type="checkbox"]),
+.field textarea {
     width: 100%;
     height: 24px;
     box-sizing: border-box;
@@ -439,9 +544,143 @@ body.editing .form {
     font: inherit;
 }
 
-.field input:focus {
+.field textarea {
+    height: auto;
+    min-height: 60px;
+    padding: 4px 6px;
+    resize: vertical;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+}
+
+.field input:focus,
+.field textarea:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: -1px;
+}
+
+.field-full {
+    flex-basis: 100%;
+}
+
+.field select {
+    height: 24px;
+    box-sizing: border-box;
+    padding: 0 4px;
+    border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, transparent));
+    border-radius: 2px;
+    background: var(--vscode-dropdown-background, var(--vscode-input-background));
+    color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+    font: inherit;
+}
+
+.field select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Komenda z listą "Insert…" obok */
+.input-with-action {
+    display: flex;
+    gap: 6px;
+}
+
+.input-with-action input {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-with-action select {
+    flex: none;
+    width: 84px;
+}
+
+/* Pytania dla ${input:…}: nazwa, typ, opcje (dla listy), wartość domyślna */
+.questions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.question {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.question-name {
+    flex: none;
+    min-width: 60px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+    color: var(--vscode-textPreformat-foreground);
+}
+
+.question select {
+    flex: none;
+    width: 64px;
+}
+
+.field .question input {
+    flex: 1 1 120px;
+    width: auto;
+    min-width: 0;
+}
+
+.field .question input[hidden] {
+    display: none;
+}
+
+.field[hidden] {
+    display: none;
+}
+
+.field-hint {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* Checkbox w kolorach motywu */
+.field label.checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: inherit;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+}
+
+.field label.checkbox:has(input:disabled) {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.checkbox input {
+    margin: 0;
+    accent-color: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder));
+}
+
+/* Zwijana sekcja z rzadziej używanymi polami */
+.advanced {
+    margin-top: 8px;
+}
+
+.advanced summary {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    user-select: none;
+}
+
+.advanced summary:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+}
+
+.advanced .fields {
+    margin-top: 6px;
 }
 
 /* Pole z kwadratowym podglądem (ikona / kolor) wyrównanym do wysokości inputa */

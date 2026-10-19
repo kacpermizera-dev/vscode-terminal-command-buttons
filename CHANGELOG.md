@@ -4,6 +4,24 @@ All notable changes to the "terminal-command-buttons" extension will be document
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.3.0] - 2026-10-19
+
+### Added
+
+- Variables in commands: `${input:name}` asks for a value when the button is clicked (the last value is suggested next time); `${file}`, `${relativeFile}`, `${workspaceFolder}`, `${selectedText}`, `${lineNumber}`, `${env:NAME}` and more come from the editor. Other `${...}`, such as `${HOME}`, is left for the shell.
+- **Insert…** next to the Command field adds a variable at the cursor, so there is no syntax to remember.
+- **Questions** in the form: for each `${input:…}` choose a text box or a list of options (comma separated) and an optional default. Stored as `inputs`, like in `tasks.json`, where `description` and `password` are also supported.
+- Buttons can be global or **only in this workspace** (checkbox in the form; disabled with a hint when no folder is open). The view groups them when both kinds exist.
+- Optional `terminal` per button: the command runs in its own named terminal, created when needed and reused.
+- **Stop** and **Restart** for a running command: in the list row, and in the right-click menu.
+
+### Changed
+
+- Nothing is written to the project anymore. Global buttons are always saved in user settings; workspace buttons are stored in VS Code's workspace storage. Before, the first button in a folder could be saved to `.vscode/settings.json`.
+- Buttons from an older `.vscode/settings.json` are shown in the workspace group. A bar in the view (and a Command Palette command) moves them into VS Code.
+- Run status is tracked per button, so buttons with variables keep their status.
+- **Rerun Last Command** repeats the last run with the same variable values.
+
 ## [0.2.0] - 2026-10-19
 
 ### Added

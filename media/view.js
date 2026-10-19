@@ -18,9 +18,10 @@ const COLORS = [
 
 let buttons = [];
 let layout = 'icons';
+let hasWorkspace = false;
 let editingId = null;
 let tooltipTimer;
-// Rozwinięcia aliasów gita (id przycisku -> tekst) i statusy uruchomień (komenda -> status)
+// Rozwinięcia aliasów gita i statusy uruchomień, oba po id przycisku
 let aliasHints = {};
 let statuses = {};
 // Różnica zegarów webview i rozszerzenia (np. przy zdalnym hoście)
@@ -44,6 +45,16 @@ const hueThumb = document.getElementById('hueThumb');
 const iconPreview = document.getElementById('iconPreview');
 const errorEl = document.getElementById('error');
 const saveBtn = document.getElementById('save');
+const workspaceOnlyInput = document.getElementById('workspaceOnly');
+const scopeHint = document.getElementById('scopeHint');
+const advancedEl = document.getElementById('advanced');
+const terminalInput = document.getElementById('terminal');
+const insertSelect = document.getElementById('insertVariable');
+const questionsField = document.getElementById('questionsField');
+const questionsEl = document.getElementById('questions');
+
+// Ustawienia pytań dla ${input:…} w edytowanej komendzie: id -> { list, options, default }
+let questionDefs = {};
 
 ICONS.forEach(icon => {
     const option = document.createElement('option');
@@ -152,6 +163,8 @@ window.addEventListener('message', event => {
         case 'buttonsUpdate':
             buttons = message.buttons;
             layout = message.layout === 'list' ? 'list' : 'icons';
+            hasWorkspace = !!message.hasWorkspace;
+            renderLegacyNotice(message.legacyCount || 0);
             aliasHints = message.aliasHints || {};
             statuses = message.statuses || {};
             clockOffset = Date.now() - message.now;
@@ -205,7 +218,16 @@ function render() {
     buttonsEl.className = 'buttons ' + layout;
     buttonsEl.replaceChildren();
 
+    // Nagłówki grup tylko, gdy są przyciski i z tego workspace, i globalne
+    const grouped = buttons.some(b => b.scope === 'workspace') && buttons.some(b => b.scope !== 'workspace');
+    let currentScope = null;
+
     buttons.forEach(button => {
+        if (grouped && button.scope !== currentScope) {
+            currentScope = button.scope;
+            buttonsEl.append(createGroupLabel(currentScope));
+        }
+
         // div zamiast <button>, bo w wierszu listy są zagnieżdżone akcje edit / delete
         const el = document.createElement('div');
         el.className = 'cmd';
@@ -213,14 +235,7 @@ function render() {
         el.dataset.id = button.id;
         el.setAttribute('role', 'button');
         el.style.setProperty('--btn-color', button.color || '');
-        el.setAttribute('aria-label', button.name + ': ' + button.command);
-        // Prawy klik: menu Run / Edit / Delete z package.json (webview/context)
-        el.dataset.vscodeContext = JSON.stringify({
-            webviewSection: 'terminalCommandButtons.button',
-            buttonId: button.id,
-            viewType: viewType,
-            preventDefaultContextMenuItems: true
-        });
+        // aria-label i menu prawego kliknięcia (data-vscode-context) ustawia applyStatuses
 
         const grip = document.createElement('span');
         grip.className = 'grip codicon codicon-gripper';
@@ -280,22 +295,55 @@ function render() {
     buttonsEl.append(add);
 }
 
-function runButton(button) {
-    hideTooltip();
-    vscode.postMessage({ type: 'executeCommand', command: button.command });
+// Belka o przyciskach z .vscode/settings.json, dopóki ich nie przeniesiesz albo nie wybierzesz "Keep"
+const legacyNotice = document.getElementById('legacyNotice');
+const legacyText = document.getElementById('legacyText');
+
+function renderLegacyNotice(count) {
+    legacyNotice.hidden = count === 0;
+    legacyText.textContent = count === 1
+        ? "1 button is saved in this project's .vscode/settings.json and can end up in commits."
+        : count + " buttons are saved in this project's .vscode/settings.json and can end up in commits.";
 }
 
-// Akcje widoczne po najechaniu na wiersz w trybie listy
+document.getElementById('legacyMove').addEventListener('click', () => {
+    vscode.postMessage({ type: 'migrateLegacy' });
+});
+
+document.getElementById('legacyKeep').addEventListener('click', () => {
+    vscode.postMessage({ type: 'dismissLegacy' });
+});
+
+// W liście nagłówek grupy, w ikonach pionowa kreska z opisem w dymku
+function createGroupLabel(scope) {
+    const label = scope === 'workspace' ? 'This workspace' : 'All workspaces';
+    const el = document.createElement('div');
+    el.className = 'group-label';
+    el.setAttribute('role', 'separator');
+    el.setAttribute('aria-label', label);
+    el.title = label;
+    el.append(createText('group-text', label));
+    return el;
+}
+
+function runButton(button) {
+    hideTooltip();
+    vscode.postMessage({ type: 'runButton', buttonId: button.id });
+}
+
+// Akcje widoczne po najechaniu na wiersz w trybie listy; stop / restart tylko gdy komenda działa
 function createRowActions(button) {
     const wrap = document.createElement('span');
     wrap.className = 'row-actions';
     [
-        ['edit', 'Edit', () => openForm(button)],
-        ['trash', 'Delete', () => vscode.postMessage({ type: 'deleteButton', buttonId: button.id })]
-    ].forEach(([icon, label, action]) => {
+        ['debug-stop', 'Stop', 'when-running', () => vscode.postMessage({ type: 'stopButton', buttonId: button.id })],
+        ['debug-restart', 'Restart', 'when-running', () => vscode.postMessage({ type: 'restartButton', buttonId: button.id })],
+        ['edit', 'Edit', '', () => openForm(button)],
+        ['trash', 'Delete', '', () => vscode.postMessage({ type: 'deleteButton', buttonId: button.id })]
+    ].forEach(([icon, label, extraClass, action]) => {
         const actionBtn = document.createElement('button');
         actionBtn.type = 'button';
-        actionBtn.className = 'icon-action codicon codicon-' + icon;
+        actionBtn.className = 'icon-action codicon codicon-' + icon + (extraClass ? ' ' + extraClass : '');
         actionBtn.title = label;
         actionBtn.setAttribute('aria-label', label + ' ' + button.name);
         actionBtn.addEventListener('click', (e) => {
@@ -336,7 +384,8 @@ function attachDrag(el, button) {
         clearDropMarkers();
     });
     el.addEventListener('dragover', (e) => {
-        if (!dragId || dragId === button.id) {
+        const dragged = dragId && buttons.find(b => b.id === dragId);
+        if (!dragged || dragId === button.id || dragged.scope !== button.scope) {
             return;
         }
         e.preventDefault();
@@ -362,7 +411,8 @@ function moveButton(fromId, toId, after) {
     const moved = buttons.find(b => b.id === fromId);
     const rest = buttons.filter(b => b.id !== fromId);
     const index = rest.findIndex(b => b.id === toId);
-    if (!moved || index < 0) {
+    // Przenoszenie między grupami zmienia zakres - to robi formularz, nie przeciąganie
+    if (!moved || index < 0 || rest[index].scope !== moved.scope) {
         return;
     }
     rest.splice(after ? index + 1 : index, 0, moved);
@@ -448,11 +498,21 @@ function applyStatuses() {
         if (!button || !dot) {
             return;
         }
-        const status = statuses[button.command];
+        const status = statuses[button.id];
+        const running = !!status && status.state === 'running';
         dot.hidden = !status;
         dot.className = 'status' + (status ? ' status-' + status.state : '');
+        el.classList.toggle('running', running);
         el.setAttribute('aria-label', button.name + ': ' + button.command +
             (status ? ', ' + STATUS_LABELS[status.state] : ''));
+        // Prawy klik: Run / Edit / Delete, a gdy komenda działa także Stop / Restart
+        el.dataset.vscodeContext = JSON.stringify({
+            webviewSection: 'terminalCommandButtons.button',
+            buttonId: button.id,
+            viewType: viewType,
+            running: running,
+            preventDefaultContextMenuItems: true
+        });
     });
     if (tooltipAnchor) {
         tooltipAnchor.refresh();
@@ -473,7 +533,7 @@ function attachTooltip(el, name, command, button) {
 
 function showTooltip(anchor, name, command, button) {
     const alias = button && aliasHints[button.id];
-    const status = button && statuses[button.command];
+    const status = button && statuses[button.id];
     // W liście nazwa i komenda są w wierszu - sam "Add button" nie potrzebuje dymka
     if (layout !== 'icons' && !command) {
         hideTooltip();
@@ -487,11 +547,22 @@ function showTooltip(anchor, name, command, button) {
     if (alias) {
         tooltipEl.append(createText('tooltip-alias', alias));
     }
+    const where = button ? [
+        button.legacy ? 'Saved in .vscode/settings.json'
+            : button.scope === 'workspace' ? 'This workspace only' : '',
+        button.terminal ? 'Terminal: ' + button.terminal : ''
+    ].filter(Boolean).join(' · ') : '';
+    if (where) {
+        tooltipEl.append(createText('tooltip-meta', where));
+    }
     if (status) {
         tooltipEl.append(createText('tooltip-status status-' + status.state, formatStatus(status)));
     }
     if (command) {
-        tooltipEl.append(createText('tooltip-hint', 'Click to run · Right-click to edit · Drag to reorder'));
+        const hint = status && status.state === 'running'
+            ? 'Right-click to stop or restart'
+            : 'Click to run · Right-click to edit · Drag to reorder';
+        tooltipEl.append(createText('tooltip-hint', hint));
     }
     tooltipEl.style.display = 'block';
 
@@ -558,6 +629,26 @@ function openForm(button) {
     nameInput.value = button ? button.name : '';
     commandInput.value = button ? button.command : '';
     iconInput.value = button && button.icon ? button.icon : '';
+    // Bez otwartego folderu checkbox zostaje widoczny, ale wyłączony - z wyjaśnieniem
+    workspaceOnlyInput.disabled = !hasWorkspace;
+    workspaceOnlyInput.checked = hasWorkspace && !!button && button.scope === 'workspace';
+    scopeHint.textContent = hasWorkspace
+        ? "Saved inside VS Code, not in the project's files."
+        : 'Open a folder to keep a button for one workspace only.';
+    terminalInput.value = button && button.terminal ? button.terminal : '';
+    // Advanced rozwinięte, gdy przycisk już coś w nim ma
+    advancedEl.open = !!terminalInput.value;
+    questionDefs = {};
+    (button && button.inputs || []).forEach(input => {
+        questionDefs[input.id] = {
+            list: input.type === 'pickString',
+            options: (input.options || []).join(', '),
+            default: input.default || '',
+            description: input.description,
+            password: input.password
+        };
+    });
+    renderQuestions();
     setColor(button && isHexColor(button.color) ? button.color.toLowerCase() : COLORS[0]);
     pickerEl.hidden = true;
     customSwatch.setAttribute('aria-expanded', 'false');
@@ -567,6 +658,118 @@ function openForm(button) {
     document.body.classList.add('editing');
     nameInput.focus();
 }
+
+// Id pytań w kolejności wystąpienia, bez powtórzeń
+function inputIds(command) {
+    const ids = [];
+    for (const match of command.matchAll(/\$\{input:([\w-]+)\}/g)) {
+        if (!ids.includes(match[1])) {
+            ids.push(match[1]);
+        }
+    }
+    return ids;
+}
+
+function splitOptions(text) {
+    return (text || '').split(',').map(o => o.trim()).filter(Boolean);
+}
+
+// Wiersz na każde ${input:…} z komendy: Text albo List z opcjami, plus wartość domyślna
+function renderQuestions() {
+    const ids = inputIds(commandInput.value);
+    questionsField.hidden = ids.length === 0;
+    questionsEl.replaceChildren();
+
+    ids.forEach(id => {
+        const def = questionDefs[id] || (questionDefs[id] = { list: false, options: '', default: '' });
+        const row = document.createElement('div');
+        row.className = 'question';
+
+        const name = createText('question-name', id);
+
+        const type = document.createElement('select');
+        type.setAttribute('aria-label', 'Answer type for ' + id);
+        [['text', 'Text'], ['list', 'List']].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            type.append(option);
+        });
+        type.value = def.list ? 'list' : 'text';
+
+        const options = document.createElement('input');
+        options.className = 'question-options';
+        options.placeholder = 'main, develop';
+        options.setAttribute('aria-label', 'Options for ' + id + ', separated by commas');
+        options.autocomplete = 'off';
+        options.spellcheck = false;
+        options.value = def.options;
+        options.hidden = !def.list;
+
+        const defaultValue = document.createElement('input');
+        defaultValue.className = 'question-default';
+        defaultValue.placeholder = 'Default (optional)';
+        defaultValue.setAttribute('aria-label', 'Default answer for ' + id);
+        defaultValue.autocomplete = 'off';
+        defaultValue.spellcheck = false;
+        defaultValue.value = def.default;
+
+        type.addEventListener('change', () => {
+            def.list = type.value === 'list';
+            options.hidden = !def.list;
+            if (def.list) {
+                options.focus();
+            }
+        });
+        options.addEventListener('input', () => {
+            def.options = options.value;
+        });
+        defaultValue.addEventListener('input', () => {
+            def.default = defaultValue.value;
+        });
+
+        row.append(name, type, options, defaultValue);
+        questionsEl.append(row);
+    });
+}
+
+// Wstawienie zmiennej w miejscu kursora; przy pytaniu zaznaczamy nazwę do nadpisania
+function insertVariable(kind) {
+    const value = commandInput.value;
+    const start = commandInput.selectionStart ?? value.length;
+    const end = commandInput.selectionEnd ?? value.length;
+    let token;
+    let selectFrom;
+    let selectTo;
+
+    if (kind === 'input') {
+        const used = inputIds(value);
+        let name = 'value';
+        for (let i = 2; used.includes(name); i++) {
+            name = 'value' + i;
+        }
+        token = '${input:' + name + '}';
+        selectFrom = start + '${input:'.length;
+        selectTo = selectFrom + name.length;
+    } else {
+        token = '${' + kind + '}';
+        selectFrom = selectTo = start + token.length;
+    }
+
+    commandInput.value = value.slice(0, start) + token + value.slice(end);
+    commandInput.focus();
+    commandInput.setSelectionRange(selectFrom, selectTo);
+    renderQuestions();
+}
+
+insertSelect.addEventListener('change', () => {
+    if (insertSelect.value) {
+        insertVariable(insertSelect.value);
+    }
+    insertSelect.value = '';
+});
+
+commandInput.addEventListener('input', renderQuestions);
 
 function closeForm() {
     editingId = null;
@@ -593,9 +796,46 @@ formEl.addEventListener('submit', (e) => {
         return;
     }
 
+    const inputs = [];
+    for (const id of inputIds(command)) {
+        const def = questionDefs[id] || {};
+        const options = splitOptions(def.options);
+        if (def.list && options.length === 0) {
+            errorEl.textContent = 'Add options for "' + id + '", separated by commas.';
+            return;
+        }
+        const input = { id: id };
+        if (def.list) {
+            input.type = 'pickString';
+            input.options = options;
+        }
+        if (def.default) {
+            input.default = def.default;
+        }
+        // Pola ustawione ręcznie w settings.json zostają
+        if (def.description) {
+            input.description = def.description;
+        }
+        if (def.password) {
+            input.password = true;
+        }
+        if (Object.keys(input).length > 1) {
+            inputs.push(input);
+        }
+    }
+
     vscode.postMessage({
         type: 'saveButton',
-        button: { id: editingId, name: name, command: command, color: color, icon: icon }
+        button: {
+            id: editingId,
+            name: name,
+            command: command,
+            color: color,
+            icon: icon,
+            scope: hasWorkspace && workspaceOnlyInput.checked ? 'workspace' : 'global',
+            terminal: terminalInput.value.trim(),
+            inputs: inputs
+        }
     });
     closeForm();
 });
