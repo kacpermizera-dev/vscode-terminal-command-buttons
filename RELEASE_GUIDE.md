@@ -1,152 +1,81 @@
-# 📦 Publikacja Release na GitHub
+# Wydanie nowej wersji
 
-## 🎯 Jak utworzyć Release dla użytkowników
+Każda wersja trafia w dwa miejsca: **GitHub Releases** (plik `.vsix`) i **VS Code Marketplace**. Komendy są dla PowerShella, uruchamiane z katalogu projektu.
 
-### Krok 1: Przygotuj pliki
+## 1. Przygotowanie
 
-1. **Upewnij się, że masz aktualny plik VSIX:**
+1. Podbij `version` w `package.json` (np. `1.0.1`) i zsynchronizuj `package-lock.json`:
 
-   ```bash
-   npm run package
+   ```powershell
+   npm install --package-lock-only --ignore-scripts
    ```
 
-2. **Sprawdź czy wszystko jest committed:**
+2. W `CHANGELOG.md` dodaj sekcję `## [X.Y.Z] - RRRR-MM-DD`.
+3. Przygotuj notatki do release'u w osobnym pliku `.md` (np. sekcja z CHANGELOG plus „Install”). Notatki zawsze podawaj przez `--notes-file`: wklejone do edytora na GitHubie albo w cudzysłowie w PowerShellu psują się (ukośniki, `${...}`).
 
-   ```bash
-   git status
-   git add .
-   git commit -m "Release v0.0.1"
-   ```
+## 2. Testy i paczka
 
-3. **Wypchnij na GitHub:**
-   ```bash
-   git push origin main
-   ```
+```powershell
+# Przykładowe przyciski w test-workspace zmieniają się przy testach migracji
+git checkout test-workspace
 
-### Krok 2: Utwórz Release na GitHub
-
-1. **Idź do swojego repozytorium na GitHub**
-2. **Kliknij "Releases"** (po prawej stronie)
-3. **Kliknij "Create a new release"**
-
-### Krok 3: Wypełnij dane Release
-
-```
-Tag version: v0.0.1
-Release title: Terminal Command Buttons v0.0.1 - Initial Release
+npm test
+npx @vscode/vsce package
 ```
 
-**Opis Release:**
+Powstaje `terminal-command-buttons-X.Y.Z.vsix` (pliki `.vsix` są w `.gitignore`).
 
-```markdown
-# 🖥️ Terminal Command Buttons v0.0.1
+## 3. Commit, tag, GitHub Release
 
-Add configurable command buttons to your VS Code terminal!
+```powershell
+git add -A
+git status
+git commit -m "Release X.Y.Z: krótki opis"
+git push origin master
+git tag -a vX.Y.Z -m "Release X.Y.Z"
+git push origin vX.Y.Z
 
-## ✨ Features
-
-- 🎯 **Quick Commands**: Execute your most-used commands with one click
-- 📋 **Scrollable Panel**: Clean interface for all your commands
-- ⚙️ **Easy Management**: Add, edit, delete buttons from UI
-- 🎨 **Color Coding**: Organize commands with custom colors
-- 💾 **Persistent Storage**: Buttons saved in workspace/user settings
-- 🔗 **Terminal Integration**: Works with active terminal
-
-## 🚀 Installation
-
-1. Download the `terminal-command-buttons-0.0.1.vsix` file below
-2. Open VS Code
-3. Press `Ctrl+Shift+P` and type "Extensions: Install from VSIX..."
-4. Select the downloaded `.vsix` file
-5. Look for the terminal icon in Activity Bar!
-
-## 📋 Default Commands
-
-- 📁 List Files (`ls -la`)
-- 🟢 Node.js Version (`node --version`)
-- 📦 NPM Version (`npm --version`)
-- 🌿 Git Status (`git status`)
-- 📍 Current Directory (`pwd`)
-
-## 🛠️ Add Custom Commands
-
-Click "+ Add" in the panel to create your own command buttons!
-
----
-
-**🎉 Enjoy faster terminal workflows!**
+gh release create vX.Y.Z terminal-command-buttons-X.Y.Z.vsix --title "Terminal Command Buttons vX.Y.Z" --notes-file "ścieżka\do\notatek.md" --latest
 ```
 
-### Krok 4: Dodaj plik VSIX
+## 4. Marketplace
 
-1. **W sekcji "Attach binaries":**
+Wydawca: **kacpermizera-dev** (https://marketplace.visualstudio.com/manage).
 
-   - Przeciągnij plik `terminal-command-buttons-0.0.1.vsix`
-   - Lub kliknij "choose your files" i wybierz plik
+### Bez tokena: przez stronę
 
-2. **Ustaw opcje:**
+1. https://marketplace.visualstudio.com/manage → wydawca `kacpermizera-dev`.
+2. Pierwsza publikacja: **+ New extension → Visual Studio Code** i przeciągnij plik `.vsix`.
+3. Kolejne wersje: przy rozszerzeniu **⋯ → Update** i przeciągnij nowy `.vsix`.
 
-   - ✅ **Set as the latest release**
-   - ❌ **Set as a pre-release** (dla stabilnej wersji)
+Weryfikacja trwa zwykle kilka minut, potem rozszerzenie jest w wyszukiwarce VS Code.
 
-3. **Kliknij "Publish release"**
+### Z tokenem: z terminala
 
-## 🎯 Po publikacji
+Token (Personal Access Token) tworzy się w Azure DevOps (https://dev.azure.com, to samo konto Microsoft):
+**User settings → Personal access tokens → New Token**, Organization: **All accessible organizations**, Scopes: **Custom defined → Show all scopes → Marketplace → Manage**.
 
-### Użytkownicy będą mogli:
-
-1. **Iść na stronę Releases:**
-
-   ```
-   https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/releases
-   ```
-
-2. **Pobrać plik VSIX** z najnowszego release
-
-3. **Zainstalować bezpośrednio w VS Code**
-
-### Aktualizacja README.md
-
-Dodaj do README badge z najnowszą wersją:
-
-```markdown
-[![Latest Release](https://img.shields.io/github/v/release/kacpermizera-dev/vscode-terminal-command-buttons)](https://github.com/kacpermizera-dev/vscode-terminal-command-buttons/releases)
+```powershell
+npx @vscode/vsce login kacpermizera-dev   # jednorazowo, wkleja się token
+npx @vscode/vsce publish --packagePath terminal-command-buttons-X.Y.Z.vsix
 ```
 
-## 🔄 Następne wersje
+### Open VSX (opcjonalnie: Cursor, VSCodium)
 
-### Dla nowych wersji:
+Konto i token na https://open-vsx.org, potem:
 
-1. **Zaktualizuj version w package.json:**
+```powershell
+npx ovsx publish terminal-command-buttons-X.Y.Z.vsix -p <token>
+```
 
-   ```json
-   "version": "0.0.2"
-   ```
+## 5. Po publikacji
 
-2. **Zbuduj nowy pakiet:**
+```powershell
+code --install-extension terminal-command-buttons-X.Y.Z.vsix --force
+```
 
-   ```bash
-   npm run package
-   ```
+Zainstalowana wersja z VSIX i ta z Marketplace to to samo rozszerzenie (`kacpermizera-dev.terminal-command-buttons`), więc VS Code będzie je dalej aktualizował z Marketplace.
 
-3. **Commit i push:**
+## CI
 
-   ```bash
-   git add .
-   git commit -m "Release v0.0.2"
-   git push origin main
-   ```
-
-4. **Utwórz nowy Release** z tagiem `v0.0.2`
-
-## 📊 Monitorowanie Downloads
-
-GitHub automatycznie pokazuje:
-
-- Liczbę downloads każdego release
-- Statystyki ruchu w repository
-- Stars i forks od użytkowników
-
----
-
-**🚀 Gotowe! Użytkownicy mogą teraz łatwo pobrać i zainstalować Twoje rozszerzenie!**
+`.github/workflows/ci.yml` przy każdym pushu na `master` i przy PR buduje rozszerzenie, uruchamia lint i testy, i zostawia gotowy `.vsix` jako artefakt (zakładka **Actions** → wybrany run → **Artifacts**).

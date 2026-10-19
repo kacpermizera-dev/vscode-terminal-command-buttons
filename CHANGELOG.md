@@ -4,6 +4,19 @@ All notable changes to the "terminal-command-buttons" extension will be document
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.0.0] - 2026-10-19
+
+First release on the VS Code Marketplace.
+
+### Added
+
+- Extension icon and Marketplace listing (description, keywords, banner).
+- CI on GitHub Actions: build, lint, tests and the packaged `.vsix` on every push and pull request.
+
+### Changed
+
+- README written for the Marketplace page; development notes moved to `DEVELOPMENT.md`, release steps to `RELEASE_GUIDE.md`.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added
